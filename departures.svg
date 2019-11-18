@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg width="128" height="128" version="1.1" viewBox="0 0 33.867 33.867" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+ <title>Avganger logo</title>
+ <metadata>
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title>Avganger logo</dc:title>
+    <dc:date>2019-08-11</dc:date>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Øyvind Stegard</dc:title>
+     </cc:Agent>
+    </dc:creator>
+    <cc:license rdf:resource="http://creativecommons.org/licenses/by/4.0/"/>
+    <dc:rights>
+     <cc:Agent>
+      <dc:title>Copyright</dc:title>
+     </cc:Agent>
+    </dc:rights>
+   </cc:Work>
+   <cc:License rdf:about="http://creativecommons.org/licenses/by/4.0/">
+    <cc:permits rdf:resource="http://creativecommons.org/ns#Reproduction"/>
+    <cc:permits rdf:resource="http://creativecommons.org/ns#Distribution"/>
+    <cc:requires rdf:resource="http://creativecommons.org/ns#Notice"/>
+    <cc:requires rdf:resource="http://creativecommons.org/ns#Attribution"/>
+    <cc:permits rdf:resource="http://creativecommons.org/ns#DerivativeWorks"/>
+   </cc:License>
+  </rdf:RDF>
+ </metadata>
+ <g transform="translate(0 -263.13)">
+  <path transform="matrix(.26458 0 0 .26458 0 263.13)" d="m63.639 4.0039a59.852 59.852 0 0 0-59.852 59.852 59.852 59.852 0 0 0 59.852 59.852 59.852 59.852 0 0 0 59.852-59.852 59.852 59.852 0 0 0-59.852-59.852zm-17.645 32.641-0.074219 52.211a17.33 26.273 5.6765 0 1-17.014-24.008 17.33 26.273 5.6765 0 1 17.088-28.203z" fill="#e60000" stroke="#000" stroke-opacity=".14815" stroke-width="4.5354"/>
+  <circle cx="16.933" cy="280.07" r="13.008" fill="none" stroke="#f4d7e3" stroke-width="3"/>
+  <circle cx="16.744" cy="279.97" r="1.6659" fill="#fff"/>
+  <path d="m16.744 270v7.0158" fill="none" stroke="#fff" stroke-width="2.3932"/>
+  <path d="m16.744 283v7.0158" fill="none" stroke="#fff" stroke-width="2.3932"/>
+  <path d="m10.989 285.88c-0.41975-0.15868-0.75098-0.38626-1.148-0.78878-1.8694-1.8952-2.1824-5.9087-0.69389-8.8962 0.15537-0.31183 0.41829-0.75411 0.58426-0.98284 0.46213-0.63688 1.283-1.3559 1.7399-1.524 0.07989-0.0294 0.08417 0.28258 0.08417 6.1398v6.1708l-0.13226-2e-3c-0.07274-1e-3 -0.26811-0.0537-0.43414-0.11643z" fill="#fff"/>
+ </g>
+</svg>

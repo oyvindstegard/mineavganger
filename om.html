@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>Avgangsliste</title>
+        <link rel="stylesheet" type="text/css" href="app.css">
+        <link rel="icon" href="departures128.png" type="image/png" />
+    </head>
+
+    <body>
+        <header onclick="document.location.href='.'">
+            <h1>
+                Avgangsliste
+                <img id="logospinner" src="departures.svg" height="128" width="128" class="logospinner" alt="Logo" />
+            </h1>
+            <p id="last-updated-info"></p>
+        </header>
+        <main>
+            <section>
+                <h2>Om applikasjonen</h2>
+                <p>Denne webapplikasjonen er en demo på bruk av Enturs APIer for
+                ruteinformasjon i sanntid. Den opprinnelige motivasjonen for å
+                lage den var fordi <a href="https://ruter.no/">Ruter.no</a>
+                fjernet muligheten til å lagre favoritter i ruteplanleggeren på
+                    sine nettsider. Jeg ønsket meg en enkel mobilvennlig
+                    nettside som raskt viste informasjon om de rutene jeg
+                    benytter hver dag, hverken mer eller mindre.</p>
+                
+                <p>Applikasjonen er skrevet av Øyvind Stegard og koden for hele
+                    applikasjonen finnes fritt tilgjengelig på
+                    <a href="https://github.com/ovyindstegard/avgangsliste/">Github</a>.</p>
+                
+                <p>En demo av applikasjonen finnes på
+                    <a href="https://stegard.net/avgangsliste/">stegard.net/avgangsliste</a>.
+                    Denne er begrenset til stoppesteder på Østlandet og
+                    Innlandet. Forfatteren fraskriver seg ethvert ansvar for
+                    korrekthet eller oppetid når det gjelder tjenesten på
+                    stegard.net.
+                </p>
+            </section>
+        </main>
+        <footer>
+            <ul class="footerMenu">
+                <li><a href=".">Tilbake</a></li>
+            </ul>
+        </footer>
+    </body>
+</html>

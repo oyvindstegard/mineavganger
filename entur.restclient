@@ -1,0 +1,202 @@
+:CLIENT = stegard_net - private
+:URL = https://api.entur.io/journey-planner/v2/graphql
+
+# Fra Tusenfryd til Oslo Bussterminal
+POST :URL
+ET-Client-Name: :CLIENT
+Accept: application/json
+Content-type: application/graphql
+
+{
+  trip(
+    from: {
+      place: "NSR:StopPlace:5143"
+      name: "TusenFryd"
+    }
+    to: {
+      place: "NSR:StopPlace:6505"
+      name: "Oslo Bussterminal"
+    }
+    # Bare Ruter-linjer
+    whiteListed: {
+      authorities:["RUT:Authority:RUT"]
+    }
+    numTripPatterns: 3
+  )
+  {
+    tripPatterns {
+      startTime
+      duration
+      legs {
+        authority {
+          name
+        }
+        fromPlace {
+          name
+        }
+        fromEstimatedCall {
+          expectedDepartureTime
+          destinationDisplay {
+            frontText
+          }
+          serviceJourney {
+            line {
+              presentation {
+                colour
+              }
+            }
+          }
+        }
+        toPlace {
+          name
+        }
+        line {
+          name
+          id
+          publicCode
+        }
+        mode
+      }
+    }
+  }
+}
+
+# Fra Oslo Bussterminal til Tusenfryd
+POST :URL
+ET-Client-Name: :CLIENT
+Accept: application/json
+Content-type: application/graphql
+
+{
+  trip(
+    from: {
+      place: "NSR:StopPlace:6505"
+      name: "Oslo Bussterminal"
+    }
+    to: {
+      place: "NSR:StopPlace:5143"
+      name: "TusenFryd"
+    }
+    # Bare Ruter-linjer
+    whiteListed: {
+      authorities:["RUT:Authority:RUT"]
+    }
+    numTripPatterns: 3
+  )
+  {
+    tripPatterns {
+      startTime
+      duration
+      legs {
+        authority {
+          name
+        }
+        fromPlace {
+          name
+        }
+        fromEstimatedCall {
+          expectedDepartureTime
+          destinationDisplay {
+            frontText
+          }
+          serviceJourney {
+            line {
+              presentation {
+                colour
+              }
+            }
+          }
+        }
+        toPlace {
+          name
+        }
+        line {
+          name
+          id
+          publicCode
+        }
+        mode
+      }
+    }
+  }
+}
+
+# Fra A. Kiellands
+POST :URL
+ET-Client-Name: :CLIENT
+Accept: application/json
+Content-type: application/graphql
+
+{
+  trip(
+    from: {
+      place: "NSR:StopPlace:6288"
+      name: "Alexander Kiellands plass"
+    }
+    to: {
+      place: "NSR:StopPlace:59621"
+      name: "Hammersborggata"
+    }
+    modes: bus
+    numTripPatterns: 3
+  )
+  {
+    tripPatterns {
+      startTime
+      duration
+      legs {
+        authority {
+          name
+        }
+        fromPlace {
+          name
+        }
+        fromEstimatedCall {
+          expectedDepartureTime
+          aimedDepartureTime
+          destinationDisplay {
+            frontText
+          }
+        }
+        toPlace {
+          name
+        }
+        serviceJourney {
+          line {
+            presentation {
+              colour
+              textColour
+            }
+          }
+        }
+        line {
+          name
+          id
+          publicCode
+        }
+        mode
+      }
+    }
+  }
+}
+
+# Get list of valid authorities
+POST :URL
+ET-Client-Name: :CLIENT
+Accept: application/json
+Content-Type: application/graphql
+
+{
+   authorities { name, id }
+}
+
+# Get list of valid places
+POST :URL
+ET-Client-Name: :CLIENT
+Accept: application/json
+Content-Type: application/graphql
+
+{
+   stopPlaces(name: "Solli")
+   { name, id }
+}

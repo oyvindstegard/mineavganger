@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>Avgangsliste</title>
+        <link rel="stylesheet" type="text/css" href="app.css">
+        <link rel="icon" href="departures128.png" type="image/png" />
+    </head>
+
+    <body>
+        <header onclick="document.location.href='.'">
+            <h1>
+                Avgangsliste
+                <img id="logospinner" src="departures.svg" height="128" width="128" class="logospinner" alt="Logo" />
+            </h1>
+            <p id="last-updated-info"></p>
+        </header>
+        <main>
+            <section>
+                <h2>Hjelp</h2>
+                <p>Denne applikasjonen er ikke en ruteplanlegger, men kan brukes
+                til å lage en personlig liste med avganger for en rute fra et
+                stoppested til et annet. Listen viser sanntidsinformasjon om
+                avganger som er lagt til. Det er begrenset til ett transportledd
+                per rute (buss, trikk, t-bane eller tog).</p>
+
+                <p> For hver lagret rute finnes det en meny på høyresiden som
+                kan brukes for å vise flere avganger, flytte opp/ned eller
+                slette.</p>
+
+                <p>Siden oppdaterer automatisk ruteinformasjonen hvert minutt
+                    eller oftere. For å manuelt oppdatere alle avgangene kan du
+                    trykke på logoen. Klokkeslettet på toppen i det røde feltet
+                    viser når siste oppdatering ble utført.</p>
+                
+                <p>Applikasjonen lagrer automatisk rutene du har lagt inn lokalt
+                    i nettleser/mobil og krever ingen innlogging.</p>
+                
+                <p>Sanntidsdata hentes direkte fra
+                    <a href="https://www.entur.org/">Enturs</a> tjenester
+                    for ruteinformasjon.</p>
+            </section>
+        </main>
+        <footer>
+            <ul class="footerMenu">
+                <li><a href=".">Tilbake</a></li>
+            </ul>
+        </footer>
+    </body>
+</html>
