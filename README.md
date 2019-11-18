@@ -1,4 +1,4 @@
-# Personlig avgangstavle som en webapp
+# mine avganger - personlig avgangstavle som en webapp
 
 *For English readers: this README is written in Norwegian, since the webapp
 primarily is intended for a Norwegian audience. However, all the code is written
@@ -26,7 +26,7 @@ trenger ingen backend annet enn Enturs åpent tilgjengelige API-er.
 
 ## Eksempel/demo kjører på
 
-https://stegard.net/avgangsliste/
+https://stegard.net/mineavganger/
 
 ## Bruk
 
@@ -35,7 +35,7 @@ https://stegard.net/avgangsliste/
 2. Ferdig; du har nå appen på ditt eget nettsted.
 
 Alternativt serves også appen <a
-href="https://stegard.net/avgangsliste/">herfra</a>, men kun for demo-formål.
+href="https://stegard.net/mineavganger/">herfra</a>, men kun for demo-formål.
 
 ## Avhengigheter
 
