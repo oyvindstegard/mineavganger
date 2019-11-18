@@ -45,7 +45,7 @@ href="https://stegard.net/avgangsliste/">herfra</a>, men kun for demo-formål.
 
 3. JQuery og jQuery.autocomplete (inkludert)
 
-4. Et sted å serve web-ressursene filene fra.
+4. Et sted å serve web-ressursene fra.
 
 5. En nettleser/mobil.
 
