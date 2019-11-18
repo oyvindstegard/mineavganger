@@ -53,4 +53,4 @@ href="https://stegard.net/avgangsliste/">herfra</a>, men kun for demo-formål.
 
 Dersom du synes applikasjonen er nyttig må du gjerne fortelle om det. Og du kan
 selvfølgelig rapportere om feil/mangler her, eller lage en pull-request som
-løser problemet.
+løser problemet. 
