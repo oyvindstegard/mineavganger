@@ -238,16 +238,15 @@ const Entur = new function() {
     /* Geocoder autocomplete for stops.
        Results are simplified to only contain list of labels and stop ids
     */
-    this.fetchGeocoderResults = function(text, successCallback, transportMode,
-                                         countyIds = defaultGeocoderCountyIds) {
+    this.fetchGeocoderResults = function(text, successCallback, transportMode, countyIds) {
+
+        const params = self.getGeocoderAutocompleteApiParams(transportMode, countyIds);
+        params.text = text;
+        
         return $.get({
             url: geocoderAutocompleteApi,
-            data: { 'text': text,
-                    'boundary.county_ids': countyIds.join(','),
-                    'size': 20,
-                    'layers': 'venue',
-                    'categories': transportModeGeocoderCategories[transportMode].join(',') },
-            headers: { 'ET-Client-Name': getEnturClientName() },
+            data: params,
+            headers: self.getGeocoderAutocompleteApiHeaders(),
             success: function(data) {
                 successCallback(data.features.map(function(feature) {
                     return {
@@ -280,16 +279,13 @@ const Entur = new function() {
         };
     };
 
-    /* Returns jQuery AJAX settings for geocoder API calls */
-    this.getGeocoderAutocompleteApiAjaxSettings = function() {
+    /* Returns required http-headers for geocoder API calls */
+    this.getGeocoderAutocompleteApiHeaders = function() {
         return {
-            dataType: 'json',
-            headers: {
-                'ET-Client-Name': getEnturClientName()
-            }
+            'ET-Client-Name': getEnturClientName()
         };
     };
-
+    
     /* Display language translation map for transportation modes */
     this.transportationModes = function() {
         return {
@@ -308,7 +304,10 @@ const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSele
         serviceUrl: Entur.getGeocoderAutocompleteApiUrl(),
         paramName: Entur.getGeocoderAutocompleteApiQueryParamName(),
         params: Entur.getGeocoderAutocompleteApiParams(transportMode),
-        ajaxSettings: Entur.getGeocoderAutocompleteApiAjaxSettings(),
+        ajaxSettings: {
+            dataType: 'json',
+            headers: Entur.getGeocoderAutocompleteApiHeaders()
+        },
         onSelect: onSelect,
         onInvalidateSelection: onInvalidate,
         minChars: 2,
@@ -335,15 +334,18 @@ const ViewportUtils = {
     /* Ensure that bottom of an element is completely visible in viewport,
      * scroll if necessary. */
     ensureLowerVisibility: function(element, delay) {
+        if (delay) {
+            setTimeout(function() {
+                ViewportUtils.ensureLowerVisibility(element);
+            }, delay);
+            return;
+        }
+        
         const viewportLower = $(window).scrollTop() + $(window).height();
         const elementLower = $(element).offset().top + $(element).outerHeight();
         const pixelsBelow = elementLower - viewportLower;
         if (pixelsBelow > -10) {
-            if (delay) {
-                setTimeout(function() { window.scrollBy(0, pixelsBelow + 10); }, delay);
-            } else {
-                window.scrollBy(0, pixelsBelow + 10);
-            }
+            window.scrollBy(0, pixelsBelow + 10);
         }
     }
 };
@@ -374,6 +376,8 @@ const DepartureInput = new (function(Entur) {
             type: 'text',
             title: 'Fra ' + modeDesc[1],
             placeholder: 'Fra ' + modeDesc[1]
+        }).focus(function (ev) {
+            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
         });
 
         // Stop place to
@@ -384,6 +388,8 @@ const DepartureInput = new (function(Entur) {
             type: 'text',
             title: 'Til ' + modeDesc[1],
             placeholder: 'Til ' + modeDesc[1]
+        }).focus(function (ev) {
+            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
         });
 
         const updateTitle = function() {
@@ -491,7 +497,6 @@ const DepartureInput = new (function(Entur) {
                               $('#newDepartureButtons').replaceWith(
                                   getNewDepartureForm(transportMode, addCallback));
                               $('#placeFromInput').focus();
-                              ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 750);
                           });
                   }));
     };
