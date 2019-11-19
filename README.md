@@ -24,18 +24,17 @@ trenger ingen backend annet enn Enturs åpent tilgjengelige API-er.
 3. Utforske Entur.org sitt JourneyPlanner API og GraphQL.
 
 
-## Eksempel/demo kjører på
+## Hvor
 
-https://stegard.net/mineavganger/
+https://mineavganger.no/
 
 ## Bruk
 
-1. Kopier filene til en web-server/hosting-løsning.
+1. Endre og tilpass, kopier filene til en web-server/hosting-løsning.
 
 2. Ferdig; du har nå appen på ditt eget nettsted.
 
-Alternativt serves også appen <a
-href="https://stegard.net/mineavganger/">herfra</a>, men kun for demo-formål.
+Alternativt serves også appen <a href="https://mineavganger.no/">herfra</a>.
 
 ## Avhengigheter
 
