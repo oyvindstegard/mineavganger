@@ -1,4 +1,4 @@
-ExpiresActive Off
+ExpiresActive On
 
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE application/javascript
