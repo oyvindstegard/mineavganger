@@ -26,6 +26,10 @@ h2 {
     font-size: 1.1rem;
 }
 
+ul {
+    list-style-type:square;
+}
+
 header #last-updated-info {
     font-size: 0.75rem;
     float: left;
