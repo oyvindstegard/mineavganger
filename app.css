@@ -81,10 +81,6 @@ img.spinonce {
   100% { transform: rotate(360deg); }
 }
 
-.clickable {
-    cursor: pointer;
-}
-
 span.startTime {
     margin-right: 0.2rem;
     margin-left: 0.2rem;
