@@ -32,24 +32,30 @@ const Storage = new function() {
         return list ? JSON.parse(list) : [];
     };
 
-    /* Adds a departure. Assigns an 'id' property automatically to object, if not
+    /* Returns a single departure by id */
+    this.getDeparture = function(id) {
+        return self.getDepartures().find(function(d) { return d.id === id; });
+    };
+
+    /* Saves a departure. Assigns an 'id' property automatically to object, if not
        already present. */
-    this.addDeparture = function(d, insertAsFirst) {
+    this.saveDeparture = function(departure) {
         const list = self.getDepartures();
-        if (!d.id) {
-            d.id = list.map(function (d) {
+        if (!departure.id) {
+            departure.id = list.map(function (d) {
                 return d.id;
             }).reduce(function(max, n) {
                 return n > max ? n : max
             }, 0) + 1;
-        }
-        if (insertAsFirst) {
-            list.unshift(d);
+        } 
+        const updateIdx = list.findIndex(function(d) { return d.id === departure.id; });
+        if (updateIdx > -1) {
+            list[updateIdx] = departure;
         } else {
-            list.push(d);
+            list.push(departure);
         }
         setDepartures(list);
-        return d;
+        return departure;
     };
 
     /* Removes a departure by id, returns the removed departure. */
@@ -615,6 +621,42 @@ function getTimeElements(trip, displayMinutesToStart) {
     });
 }
 
+function getDepartureSection(d) {
+    return $('<section/>', {id: 'departure-' + d.id, class: 'departure'})
+        .data('id', d.id)
+        .data('title', d.title)
+        .data('placeFromId', d.placeFrom.stopId)
+        .data('placeFromName', d.placeFrom.name)
+        .data('placeToId', d.placeTo.stopId)
+        .data('placeToName', d.placeTo.name)
+        .data('mode', d.mode)
+        .append($('<h2/>', {class:'departureHeading'}).text(d.title))
+        .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
+            'Snu': function(ev) {
+                const reversed = reverseDepartureInStorage(d);
+                $('#departure-' + d.id).replaceWith(getDepartureSection(reversed));
+                updateDeparture($('#departure-' + d.id));
+            },
+            'Topp': function(ev) {
+                Storage.moveFirst(d.id);
+                $('#departure-' + d.id).detach().prependTo($('main'));
+            },
+            'Bunn': function(ev) {
+                Storage.moveLast(d.id);
+                $('#departure-' + d.id).detach().insertBefore($('#newDepartureButtons'));
+            },
+            'Slett': function(ev) {
+                ev.preventDefault();
+                Storage.removeDeparture(d.id);
+                $('#departure-' + d.id).remove();
+                if (!$('section.departure').length) {
+                    $('#noDepartures').show();
+                }
+            }
+        }))
+        .append($('<ul/>', {class:'departureList'}));
+}
+
 function showDepartureLoader(el) {
     const contentHeight = Math.max(16, $(el).height());
     const loaderEl = $('<ul/>', {class:'departureList', height:contentHeight}).append(
@@ -627,6 +669,18 @@ function spinOnce(el) {
         el = $(el);
     }
     el.replaceWith(el.clone().addClass('spinonce'));
+}
+
+function reverseDepartureInStorage(departure) {
+    const tmp = departure.placeTo;
+    departure.placeTo = departure.placeFrom;
+    departure.placeFrom = tmp;
+    // TODO consolidate with code in input form that does the same
+    departure.title = 'Fra '
+        + departure.placeFrom.name.replace(/,.*/,'')
+        + ' til '
+        + departure.placeTo.name.replace(/,.*/,'');
+    return Storage.saveDeparture(departure);
 }
 
 function updateDeparture(el) {
@@ -664,7 +718,15 @@ function updateDeparture(el) {
                     ));
             } else {
                 $('ul.departureList', el)
-                    .replaceWith($('<ul/>', {class: 'departureList'}).append(listItems));
+                    .replaceWith($('<ul/>', {class: 'departureList'})
+                                 .append(listItems)
+                                 .click(function(ev) {
+                                     if (!el.data('numTrips') || el.data('numTrips') === 3) {
+                                         updateDeparture(el.data('numTrips', 6));
+                                     } else {
+                                         updateDeparture(el.data('numTrips', 3));
+                                     }
+                                 }));
             }
         }).catch(function(e) {
             $('ul.departureList', el)
@@ -672,8 +734,8 @@ function updateDeparture(el) {
                     $('<ul/>', {class: 'departureList'})
                         .append($('<li/>')
                                 .text('Feilet for avgang'
-                                      + ' fra ' + data.placeFromName + '[' + data.placeFrom + ']'
-                                      + ' til ' + data.placeToName + '[' + data.placeTo + ']'
+                                      + ' fra ' + data.placeFromName + '[' + data.placeFromId + ']'
+                                      + ' til ' + data.placeToName + '[' + data.placeToId + ']'
                                       + ': ' + e)));
         }).then(function() {
             el.data('loading', false);
@@ -701,43 +763,7 @@ function updateDepartures() {
 function listDepartures() {
     const appContent = $('main').empty();
     Storage.getDepartures().forEach(function (d) {
-        $('<section/>', {id: 'departure-' + d.id, class: 'departure'})
-            .data('id', d.id)
-            .data('title', d.title)
-            .data('placeFromId', d.placeFrom.stopId)
-            .data('placeFromName', d.placeFrom.name)
-            .data('placeToId', d.placeTo.stopId)
-            .data('placeToName', d.placeTo.name)
-            .data('mode', d.mode)
-            .append($('<h2/>', {class:'departureHeading'}).text(d.title))
-            .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
-                '&#x2b;/&#x2212;': function(ev) {
-                    const el = $('#departure-' + d.id);
-                    if (!el.data('numTrips') || el.data('numTrips') === 3) {
-                        updateDeparture(el.data('numTrips', 6));
-                    } else {
-                        updateDeparture(el.data('numTrips', 3));
-                    }
-                },
-                'Topp': function(ev) {
-                    Storage.moveFirst(d.id);
-                    $('#departure-' + d.id).detach().prependTo($('main'));
-                },
-                'Bunn': function(ev) {
-                    Storage.moveLast(d.id);
-                    $('#departure-' + d.id).detach().insertBefore($('#newDepartureButtons'));
-                },
-                'Slett': function(ev) {
-                    ev.preventDefault();
-                    Storage.removeDeparture(d.id);
-                    $('#departure-' + d.id).remove();
-                    if (!$('section.departure').length) {
-                        $('#noDepartures').show();
-                    }
-                }
-            }))
-            .append($('<ul/>', {class:'departureList'}))
-            .appendTo(appContent);
+        getDepartureSection(d).appendTo(appContent);
     });
 
     $('<section/>', {id:'noDepartures'}).append(
@@ -749,7 +775,7 @@ function listDepartures() {
     }
 
     const addCallback = function (newDep) {
-        Storage.addDeparture({
+        Storage.saveDeparture({
             placeFrom: {
                 stopId: newDep.placeFrom.stopId,
                 name: newDep.placeFrom.name
