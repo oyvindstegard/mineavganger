@@ -9,7 +9,7 @@ egen personlige avgangstavle for kollektivreiser i Norge. I form av en enkel og
 tilstandsløs webapplikasjon. All kode er JavaScript/HTML og applikasjonen
 trenger ingen backend annet enn Enturs åpent tilgjengelige API-er.
 
-![Screenshot](https://stegard.net/dl/mineavganger.png)
+![Screenshot](https://stegard.net/dl/mineavganger3.png)
 
 ## Motivasjon
 
