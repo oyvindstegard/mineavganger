@@ -2,17 +2,19 @@
 <html lang="no">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <title>mine avganger</title>
-        <link rel="stylesheet" type="text/css" href="app.css">
-        <link rel="icon" href="departures128.png" type="image/png" />
+        <link rel="stylesheet" href="app.css" type="text/css">
+        <link rel="icon" href="logo-128.png" type="image/png">
+        <link rel="apple-touch-icon" sizes="180x180" href="logo-180.png" type="image/png">
     </head>
 
     <body>
         <header onclick="document.location.href='.'">
             <h1>
                 mine avganger
-                <img id="logospinner" src="departures.svg" height="128" width="128" class="logospinner" alt="Logo" />
+                <img id="logospinner" src="logo.svg" height="128" width="128" alt="Logo" />
             </h1>
             <p id="last-updated-info"></p>
         </header>
@@ -32,16 +34,17 @@
                 
                 <p>Applikasjonen finnes på
                     <a href="https://mineavganger.no/">mineavganger.no</a>.
-                    Denne er begrenset til stoppesteder på Østlandet og
-                    Innlandet. Forfatteren fraskriver seg ethvert ansvar for
+                    Denne er foreløpig begrenset til stoppesteder på Østlandet
+                    og Innlandet. Forfatteren fraskriver seg ethvert ansvar for
                     korrekthet eller oppetid når det gjelder tjenesten på
                     mineavganger.no.
                 </p>
 
-                <p>Versjon 2019-11-beta-2. Endringer:</p>
+                <p>Versjon 2019-11-beta-3. Endringer:</p>
                 <ul>
-                    <li>La til mulighet for å snu retning på lagret rute (bytte om fra/til).</li>
-                    <li>Klikk på avgangslistene vil trigge visning av flere eller færre elementer.</li>
+                    <li>Visuelle justeringer og forbedringer i koden.</li>
+                    <li>Reduser automatisk oppdatering av avganger til maksimalt én gang per minutt.</li>
+                    <li>La funksjon for å utvide listen med avganger tilbake i dropdown-meny.</li>
                 </ul>
             </section>
         </main>

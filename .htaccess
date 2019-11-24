@@ -5,4 +5,5 @@ ExpiresActive On
   AddOutputFilterByType DEFLATE text/javascript
   AddOutputFilterByType DEFLATE text/css
   AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE image/svg+xml
 </IfModule>

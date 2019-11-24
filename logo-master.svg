@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="128"
+   height="128"
+   version="1.1"
+   viewBox="0 0 33.867 33.867"
+   id="svg858"
+   sodipodi:docname="logo-master.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <title
+     id="title1017">mineavganger.no logo</title>
+  <defs
+     id="defs862" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="640"
+     inkscape:window-height="480"
+     id="namedview860"
+     showgrid="false"
+     inkscape:zoom="5.6568542"
+     inkscape:cx="32.997362"
+     inkscape:cy="70.638522"
+     inkscape:current-layer="svg858" />
+  <metadata
+     id="metadata842">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>mineavganger.no logo</dc:title>
+        <dc:date>2019-11-24</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Øyvind Stegard</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by/4.0/" />
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>Copyright</dc:title>
+          </cc:Agent>
+        </dc:rights>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+  <path
+     style="fill:#e60025;stroke:#000000;stroke-width:1.32292969;stroke-opacity:0.14814998;stroke-miterlimit:4;stroke-dasharray:none;fill-opacity:1"
+     inkscape:connector-curvature="0"
+     id="path844"
+     d="m 16.837607,1.0593519 c -8.7457838,-3e-7 -15.8356426,7.0898583 -15.8356425,15.8356421 0,8.745784 7.0898587,15.835642 15.8356425,15.835642 8.745784,0 15.835642,-7.089858 15.835642,-15.835642 0,-8.7457836 -7.089858,-15.8356421 -15.835642,-15.8356421 z"
+     sodipodi:nodetypes="sssss" />
+  <circle
+     style="fill:none;stroke:#ffffff;stroke-width:3;stroke-opacity:0.86131388"
+     id="circle846"
+     r="13.008"
+     cy="16.894995"
+     cx="16.837606" />
+  <circle
+     style="fill:#ffffff;stroke-width:1.05615306"
+     id="circle848"
+     r="1.7594453"
+     cy="16.840002"
+     cx="16.837606" />
+  <path
+     style="fill:none;stroke:#ffffff;stroke-width:2.39319992"
+     inkscape:connector-curvature="0"
+     id="path850"
+     d="m 16.837607,6.87 v 7.0158" />
+  <path
+     style="fill:none;stroke:#ffffff;stroke-width:2.39319992"
+     inkscape:connector-curvature="0"
+     id="path852"
+     d="m 16.837607,19.87 v 7.0158" />
+  <path
+     style="fill:#ffffff;stroke:#000000;stroke-width:1.32292969;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.14814998"
+     inkscape:connector-curvature="0"
+     id="path854"
+     d="M 11.512915,24.531693 C 10.981489,24.330796 10.562136,24.042668 10.059488,23.533057 7.692731,21.133639 7.2964569,16.052342 9.1809862,12.270015 9.3776929,11.875221 9.7105633,11.315272 9.9206901,11.025688 10.50577,10.219366 11.545034,9.3090503 12.123493,9.0962267 c 0.101146,-0.037223 0.106568,0.3577619 0.106568,7.7733003 v 7.812548 l -0.167448,-0.0026 c -0.09209,-0.0013 -0.339441,-0.06798 -0.549644,-0.147405 z" />
+</svg>

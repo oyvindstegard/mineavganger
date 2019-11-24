@@ -553,8 +553,8 @@ const DropdownMenu = new function() {
                     })
                    )
             .append($('<div/>', {class: 'Dropdown__menu Dropdown__menuborder',
-                                 id: 'Dropdown__menu-' + nextId})
-                    .append($.map(actions, function(val, key) {
+                                 id: 'Dropdown__menu-' + nextId}
+                     ).append($.map(actions, function(val, key) {
                         return $('<button/>', { class:'Dropdown__item' }).html(key).click(val);
                     }))
                    );
@@ -632,6 +632,9 @@ function getDepartureSection(d) {
         .data('mode', d.mode)
         .append($('<h2/>', {class:'departureHeading'}).text(d.title))
         .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
+            '&#x2b; / &#x2212;': function(ev) {
+                showMoreOrLess($('#departure-' + d.id));
+            },
             'Snu': function(ev) {
                 const reversed = reverseDepartureInStorage(d);
                 $('#departure-' + d.id).replaceWith(getDepartureSection(reversed));
@@ -658,9 +661,9 @@ function getDepartureSection(d) {
 }
 
 function showDepartureLoader(el) {
-    const contentHeight = Math.max(16, $(el).height());
+    const contentHeight = Math.max(32, $(el).height()) + 'px';
     const loaderEl = $('<ul/>', {class:'departureList', height:contentHeight}).append(
-        $('<li/>').append($('<img/>', { src: 'departures128.png', class:'loader' })));
+        $('<li/>').append($('<img/>', { src: 'logo.svg', class:'loader' })));
     $(el).replaceWith(loaderEl);
 }
 
@@ -669,6 +672,18 @@ function spinOnce(el) {
         el = $(el);
     }
     el.replaceWith(el.clone().addClass('spinonce'));
+}
+
+// Expects a departure section element as argument
+function showMoreOrLess(el) {
+    if (! (el instanceof jQuery)) {
+        el = $(el);
+    }
+    if (!el.data('numTrips') || el.data('numTrips') === 3) {
+        updateDeparture(el.data('numTrips', 6));
+    } else {
+        updateDeparture(el.data('numTrips', 3));
+    }
 }
 
 function reverseDepartureInStorage(departure) {
@@ -684,7 +699,9 @@ function reverseDepartureInStorage(departure) {
 }
 
 function updateDeparture(el) {
-    el = $(el);
+    if (! (el instanceof jQuery)) {
+        el = $(el);
+    }
     if (el.data('loading')) {
         return;
     } else {
@@ -719,14 +736,7 @@ function updateDeparture(el) {
             } else {
                 $('ul.departureList', el)
                     .replaceWith($('<ul/>', {class: 'departureList'})
-                                 .append(listItems)
-                                 .click(function(ev) {
-                                     if (!el.data('numTrips') || el.data('numTrips') === 3) {
-                                         updateDeparture(el.data('numTrips', 6));
-                                     } else {
-                                         updateDeparture(el.data('numTrips', 3));
-                                     }
-                                 }));
+                                 .append(listItems));
             }
         }).catch(function(e) {
             $('ul.departureList', el)
@@ -742,20 +752,25 @@ function updateDeparture(el) {
         });
 }
 
-
+var lastUpdate = null;
 var updateTimeout = null;
-function updateDepartures() {
+function updateDepartures(userIntent) {
     if (updateTimeout) {
         clearTimeout(updateTimeout);
         updateTimeout = null;
     }
-    spinOnce($('#logospinner'));
 
-    $('main section.departure').each(function(idx, el) {
-        updateDeparture(el);
-    });
+    if (userIntent === true || lastUpdate === null
+        || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
+        spinOnce($('#logospinner'));
 
-    $('#last-updated-info').text(new Date().hhmm());
+        $('main section.departure').each(function(idx, el) {
+            updateDeparture(el);
+        });
+
+        lastUpdate = new Date();
+        $('#last-updated-info').text(lastUpdate.hhmm());
+    }
 
     updateTimeout = setTimeout(updateDepartures, 60000);
 }
@@ -788,7 +803,7 @@ function listDepartures() {
             mode: newDep.mode
         });
         listDepartures();
-        updateDepartures();
+        updateDepartures(true);
     };
 
     DepartureInput.getNewDepartureButtons(addCallback).appendTo(appContent);
@@ -814,7 +829,7 @@ function listDepartures() {
     $(document).ready(function() {
         listDepartures();
         updateDepartures();
-        $('header').click(updateDepartures);
+        $('header').click(function(ev) { updateDepartures(true); });
         $(window).focus(updateDepartures);
     });
 });
