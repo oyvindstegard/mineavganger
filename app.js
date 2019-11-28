@@ -162,6 +162,26 @@ const Entur = new function() {
         'metro': ['metroStation']
     };
 
+    /* Display language translations for transportation modes */
+    const TransportMode = function(mode, name, place, iconHref) {
+        this.mode = function() { return mode; };
+        this.name = function(capitalize) {
+            return capitalize ? name.charAt(0).toUpperCase() + name.slice(1) : name;
+        };
+        this.place = function(capitalize) {
+            return capitalize ?
+                place.charAt(0).toUpperCase() + place.slice(1) : place;
+        };
+        this.iconHref = function() { return iconHref; };
+    };
+    
+    this.transportModes = {
+        'bus': new TransportMode('bus', 'buss', 'holdeplass', ''),
+        'tram': new TransportMode('tram', 'trikk', 'holdeplass', ''),
+        'metro': new TransportMode('metro', 't-bane', 'stasjon', ''),
+        'rail': new TransportMode('rail', 'tog', 'stasjon', '')
+    };
+
     // Make trips query limited by 'from', 'to' and a single mode of transportation
     this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
         return {
@@ -292,15 +312,6 @@ const Entur = new function() {
         };
     };
     
-    /* Display language translation map for transportation modes */
-    this.transportationModes = function() {
-        return {
-            'bus': ['buss', 'holdeplass'],
-            'tram': ['trikk', 'holdeplass'],
-            'metro': ['t-bane', 'stasjon'],
-            'rail': ['tog', 'stasjon']
-        };
-    };
 };
 
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
@@ -362,7 +373,7 @@ const DepartureInput = new (function(Entur) {
     const self = this;
 
     const getNewDepartureForm = function(transportMode, addCallback) {
-        const modeDesc = Entur.transportationModes()[transportMode];
+        const modeDesc = Entur.transportModes[transportMode];
 
         // Title
         const titleInputLabel = $('<label/>', { for: 'titleInput' }).text('Tittel (automatisk generert)');
@@ -371,29 +382,29 @@ const DepartureInput = new (function(Entur) {
             type: 'text',
             readonly: 'readonly',
             title: titleInputLabel.text(),
-            placeholder: 'Ny avgang med ' + modeDesc[0]
+            placeholder: 'Ny avgang med ' + modeDesc.name()
         });
 
         // Stop place from
-        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' }).text('Fra ' + modeDesc[1]);
+        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' }).text('Fra ' + modeDesc.place());
         const placeFromInvalid = $('<span/>', {id:'placeFromInvalid', class:'invalid'}).text('Ikke funnet.');
         const placeFromInput = $('<input/>', {
             id: 'placeFromInput',
             type: 'text',
-            title: 'Fra ' + modeDesc[1],
-            placeholder: 'Fra ' + modeDesc[1]
+            title: 'Fra ' + modeDesc.place(),
+            placeholder: 'Fra ' + modeDesc.place()
         }).focus(function (ev) {
             ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
         });
 
         // Stop place to
-        const placeToInputLabel = $('<label/>', { for: 'placeToInput' }).text('Til ' + modeDesc[1]);
+        const placeToInputLabel = $('<label/>', { for: 'placeToInput' }).text('Til ' + modeDesc.place());
         const placeToInvalid = $('<span/>', {id:'placeToInvalid', class:'invalid'}).text('Ikke funnet.');
         const placeToInput = $('<input/>', {
             id: 'placeToInput',
             type: 'text',
-            title: 'Til ' + modeDesc[1],
-            placeholder: 'Til ' + modeDesc[1]
+            title: 'Til ' + modeDesc.place(),
+            placeholder: 'Til ' + modeDesc.place()
         }).focus(function (ev) {
             ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
         });
@@ -493,10 +504,9 @@ const DepartureInput = new (function(Entur) {
     
     this.getNewDepartureButtons = function(addCallback) {
         return $('<section/>', {id: 'newDepartureButtons'}).append(
-            $.map(Entur.transportationModes(),
+            $.map(Entur.transportModes,
                   function (modeDesc, transportMode) {
-                      const buttonText = '+'
-                            + modeDesc[0].charAt(0).toUpperCase() + modeDesc[0].slice(1);
+                      const buttonText = '+' + modeDesc.name(true);
                       return $('<button/>', {class:'newDeparture'}).text(buttonText)
                           .click(function(e) {
                               e.preventDefault();
@@ -725,11 +735,11 @@ function updateDeparture(el) {
                                          getPlatformElement(trip));
             });
             if (!listItems.length) {
-                const modeDesc = Entur.transportationModes()[mode];
+                const modeDesc = Entur.transportModes[mode];
                 $('ul.departureList', el)
                     .replaceWith($('<ul/>', { 'class': 'departureList' }).append(
                         $('<li/>').text('Fant ingen avganger med '
-                                        + modeDesc[0]
+                                        + modeDesc.name()
                                         + ' fra ' + data.placeFromName
                                         + ' til ' + data.placeToName)
                     ));
@@ -739,14 +749,18 @@ function updateDeparture(el) {
                                  .append(listItems));
             }
         }).catch(function(e) {
-            $('ul.departureList', el)
-                .replaceWith(
-                    $('<ul/>', {class: 'departureList'})
-                        .append($('<li/>')
-                                .text('Feilet for avgang'
-                                      + ' fra ' + data.placeFromName + '[' + data.placeFromId + ']'
-                                      + ' til ' + data.placeToName + '[' + data.placeToId + ']'
-                                      + ': ' + e)));
+            $('ul.departureList', el).replaceWith(
+                $('<ul/>', {class: 'departureList'})
+                    .append($('<li/>').html('Ai, noe gikk galt &#x26a0;'))
+                    .append($('<li/>').html('<a href="">Klikk for å forsøke på nytt.</a>')
+                            .click(function(ev) {
+                                ev.preventDefault();
+                                updateDeparture(el);
+                            }))
+                    .append($('<li/>', {class:'technical'})
+                            .html('Feil: [' + data.placeFromId + '] &#x2192; [' + data.placeToId + ']: '
+                                  + e.statusText))
+                    );
         }).then(function() {
             el.data('loading', false);
         });
@@ -830,6 +844,6 @@ function listDepartures() {
         listDepartures();
         updateDepartures();
         $('header').click(function(ev) { updateDepartures(true); });
-        $(window).focus(updateDepartures);
+        $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
     });
 });

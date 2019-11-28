@@ -74,6 +74,11 @@ footer {
     display: inline;
     margin-right: 1rem;
 }
+.technical {
+    font-size: 75%;
+    color: #555555;
+    font-style: italic;
+}
 
 img.loader {
     width: 32px;
@@ -243,7 +248,7 @@ input#titleInput {
     border-bottom: none;
     margin-bottom: 0.5rem;
     font-size: 1.1rem;
-    width: 320px;
+    width: 360px;
     font-weight: bold;
 }
 label {
