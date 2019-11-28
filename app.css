@@ -39,14 +39,14 @@ header h1 {
     width: 100%;
 }
 
-img#logospinner {
+#logospinner {
     width: 32px;
     height: 32px;
     vertical-align: middle;
     margin-left: 1rem;
 }
 
-header #last-updated-info {
+#last-updated-info {
     font-size: 0.75rem;
     float: left;
     margin: 0.1rem 0 0.3rem 0;
@@ -131,7 +131,7 @@ section.departure {
     margin-top: 1.6rem;
     min-height: 7.1rem;
 }
-section#noDepartures {
+#noDepartures {
     display: none;
 }
 .departureHeading {
@@ -149,7 +149,7 @@ section#noDepartures {
 .newDeparture {
     margin-top: 2rem;
 }
-div#newDepartureButtons {
+#newDepartureButtons {
     margin-bottom: 1rem;
 }
 
@@ -193,19 +193,19 @@ button {
 }
 
 /* DropdownMenu */
-div.Dropdown__container {
+.Dropdown__container {
     float: right;
     margin-right: 1rem;
     margin-left: 0.5rem;
 }
-button.Dropdown__button {
+.Dropdown__button {
     background-color: #CCCCCC;
     margin: 0;
     width: 32px;
     height: 32px;
     line-height: 12px;
 }
-div.Dropdown__menu {
+.Dropdown__menu {
     background-color: #CCCCCC;
     position: absolute;
     display: none;
@@ -215,16 +215,17 @@ div.Dropdown__menu {
     transform: translate(-58px);
     z-index: 1;
 }
-button.Dropdown__item {
+.Dropdown__item {
     background-color: #999999;
     display: block;
     width: 100%;
     text-align: center;
     margin: 0 0 0.2rem 0;
 }
-div.Dropdown__menuborder {
+.Dropdown__menuborder {
     border: solid 1px #999999;
 }
+
 /* Inputs */
 input {
     margin-bottom: 1rem;
@@ -244,7 +245,7 @@ span.invalid {
     font-style: italic;
     display: none;
 }
-input#titleInput {
+#titleInput {
     border-bottom: none;
     margin-bottom: 0.5rem;
     font-size: 1.1rem;
