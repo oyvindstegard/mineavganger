@@ -151,8 +151,8 @@ const Entur = new function() {
 
     const geocoderAutocompleteApi = 'https://api.entur.io/geocoder/v1/autocomplete';
 
-    // Norwegian county ids, https://no.wikipedia.org/wiki/Fylkesnummer
-    const defaultGeocoderCountyIds = ['01','02','03','04','05','06','07','08'];
+    // Norwegian county ids, eastern parts, https://no.wikipedia.org/wiki/Fylkesnummer
+    const defaultGeocoderCountyIds = ['03','30','34','38'];
 
     // Transportation modes to geocoder stop categories
     const transportModeGeocoderCategories = {
