@@ -9,7 +9,7 @@
  * Code uses the following libraries, which are all MIT-licensed:
  * - jQuery, https://jquery.com/
  * - Ajax AutoComplete for jQuery,
- *   https://www.devbridge.com/sourcery/components/jquery-autocomplete/
+ *   https://github.com/devbridge/jQuery-Autocomplete
  **********************************************************************************
  */
 
@@ -830,7 +830,7 @@ function listDepartures() {
     const baseUrl = document.currentScript.src.replace(/[^\/]*$/, '');
 
     const script = document.createElement('script');
-    script.src = baseUrl + 'jquery-3.4.1.min.js';
+    script.src = baseUrl + 'jquery-3.6.0.min.js';
     script.onload = function(ev) {
         const script = document.createElement('script');
         script.src = baseUrl + 'jquery.autocomplete.min.js';
