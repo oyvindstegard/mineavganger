@@ -53,3 +53,12 @@ Alternativt serves også appen <a href="https://mineavganger.no/">herfra</a>.
 Dersom du synes applikasjonen er nyttig må du gjerne fortelle om det. Og du kan
 selvfølgelig rapportere om feil/mangler her, eller lage en pull-request som
 løser problemet. 
+
+### TODO
+
+- Ikoner (eller tekst) som beskriver transporttype per avgang.
+- Vise avvik for avgang hvis de finnes.
+- Mulighet for eksportere avganger som URL som kan bokmerkes.
+- Fikse meny-ikon ved skalering og fungere generelt bedre ved brukerskalering.
+- Sjekke om det finnes avganger før bruker legger til.
+- Rydde i CSS.

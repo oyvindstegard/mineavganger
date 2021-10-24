@@ -45,7 +45,7 @@ const Storage = new function() {
             departure.id = list.map(function (d) {
                 return d.id;
             }).reduce(function(max, n) {
-                return n > max ? n : max
+                return n > max ? n : max;
             }, 0) + 1;
         } 
         const updateIdx = list.findIndex(function(d) { return d.id === departure.id; });
@@ -85,6 +85,7 @@ const Storage = new function() {
             setDepartures(departures);
             return departure;
         }
+        return undefined;
     };
 
     /* Moves an existing departure to first position in list.
@@ -333,7 +334,7 @@ const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSele
                 return {
                     'value': feature.properties.label,
                     'data': feature.properties.id
-                }
+                };
             });
             return {
                 suggestions: suggestions
@@ -459,7 +460,7 @@ const DepartureInput = new (function(Entur) {
         }, function() {
             $(this).data('stopPlaceId', null).data('stopPlace', null);
         });
-
+        
         return $('<form/>', { 'id': 'newDepartureForm',
                               'class': 'newDeparture',
                               'autocomplete': 'off' }) // Disable native "history" auto-completion
@@ -500,7 +501,7 @@ const DepartureInput = new (function(Entur) {
                 });
                 return true;
             });
-    }
+    };
     
     this.getNewDepartureButtons = function(addCallback) {
         return $('<section/>', {id: 'newDepartureButtons'}).append(
@@ -789,14 +790,14 @@ function updateDepartures(userIntent) {
     updateTimeout = setTimeout(updateDepartures, 60000);
 }
 
-function listDepartures() {
+function renderApp() {
     const appContent = $('main').empty();
     Storage.getDepartures().forEach(function (d) {
         getDepartureSection(d).appendTo(appContent);
     });
 
     $('<section/>', {id:'noDepartures'}).append(
-        $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å trykke på knappene under.</p>')
+        $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å velge transporttype med knappene under.</p>')
     ).appendTo(appContent);
 
     if (!$('section.departure').length) {
@@ -816,7 +817,7 @@ function listDepartures() {
             title: newDep.title,
             mode: newDep.mode
         });
-        listDepartures();
+        renderApp();
         updateDepartures(true);
     };
 
@@ -841,9 +842,13 @@ function listDepartures() {
 
 })(function() {
     $(document).ready(function() {
-        listDepartures();
+        renderApp();
         updateDepartures();
         $('header').click(function(ev) { updateDepartures(true); });
         $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
     });
 });
+
+/* Local Variables: */
+/* js2-additional-externs: ("$") */
+/* End: */
