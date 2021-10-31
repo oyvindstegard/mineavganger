@@ -15,305 +15,10 @@
 
 'use strict';
 
-/* Simple local browser storage of personal departures. */
-const Storage = new function() {
-
-    const db = window.localStorage;
-    const self = this;
-    
-    const setDepartures = function(departures) {
-        db.setItem('departures', JSON.stringify(departures));
-        return departures;
-    };
-
-    /* Returns all stored departures as an array. */
-    this.getDepartures = function() {
-        const list = db.getItem('departures');
-        return list ? JSON.parse(list) : [];
-    };
-
-    /* Returns a single departure by id */
-    this.getDeparture = function(id) {
-        return self.getDepartures().find(function(d) { return d.id === id; });
-    };
-
-    /* Saves a departure. Assigns an 'id' property automatically to object, if not
-       already present. */
-    this.saveDeparture = function(departure) {
-        const list = self.getDepartures();
-        if (!departure.id) {
-            departure.id = list.map(function (d) {
-                return d.id;
-            }).reduce(function(max, n) {
-                return n > max ? n : max;
-            }, 0) + 1;
-        } 
-        const updateIdx = list.findIndex(function(d) { return d.id === departure.id; });
-        if (updateIdx > -1) {
-            list[updateIdx] = departure;
-        } else {
-            list.push(departure);
-        }
-        setDepartures(list);
-        return departure;
-    };
-
-    /* Removes a departure by id, returns the removed departure. */
-    this.removeDeparture = function(id) {
-        var departureToRemove;
-        setDepartures(self.getDepartures().filter(function(d) {
-            if (id === d.id) {
-                departureToRemove = d;
-                return false;
-            }
-            return true;
-        }));
-        return departureToRemove;
-    };
-
-    const moveDeparture = function(departureId, first) {
-        const departures = self.getDepartures();
-        const departureToMove = departures.findIndex(function(d) { return d.id === departureId; });
-        if (departureToMove > -1) {
-            const departure = departures[departureToMove];
-            departures.splice(departureToMove,1);
-            if (first) {
-                departures.unshift(departure);
-            } else {
-                departures.push(departure);
-            }
-            setDepartures(departures);
-            return departure;
-        }
-        return undefined;
-    };
-
-    /* Moves an existing departure to first position in list.
-       Returns moved departure. */
-    this.moveFirst = function(departureId) {
-        return moveDeparture(departureId, true);
-    };
-
-    /* Moves an existing departure to last position in list.
-       Returns moved departure. */
-    this.moveLast = function(departureId) {
-        return moveDeparture(departureId, false);
-    };
-
-    this.removeAll = function() {
-        return setDepartures([]);
-    };
-};
-
-/* Generic throttled async function dispatch. Typical use case would be
-   to throttle AJAX requests. Function calls are processed in FIFO order.
-
-   maxConcurrency: max number of concurrently dispatched async operations.
-   delayMillis: milliseconds to delay if concurrency is at max when new function
-                 calls are enqueued. */
-const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
-
-    this.maxConcurrency = maxConcurrency;
-    this.delayMillis = delayMillis;
-    const self = this;
-    
-    const queue = [];
-    var inFlight = 0;
-    var delayTimer = null;
-    const processQueue = function() {
-        if (delayTimer) {
-            clearTimeout(delayTimer);
-        }
-        while (queue.length > 0 && inFlight < self.maxConcurrency) {
-            const dispatch = queue.shift();
-            ++inFlight;
-            dispatch.func()
-                .then(dispatch.deferred.resolve)
-                .catch(dispatch.deferred.reject)
-                .then(function() { --inFlight; });
-        }
-        delayTimer = queue.length > 0 ? setTimeout(processQueue, self.delayMillis) : null;
-    };
-
-    /* Enqueues an async function execution, possibly delaying it if too many
-       concurrent calls are in flight. Returns a promise. */
-    this.enqueue = function(asyncFunc) {
-        const deferred = $.Deferred();
-        queue.push({func: asyncFunc, deferred: deferred});
-        processQueue();
-        return deferred.promise();
-    };
-};
-
-/* Entur JourneyPlanner and Geocoder APIs. */
-const Entur = new function() {
-
-    const journeyPlannerApi = 'https://api.entur.io/journey-planner/v2/graphql';
-
-    const geocoderAutocompleteApi = 'https://api.entur.io/geocoder/v1/autocomplete';
-
-    // Norwegian county ids, eastern parts, https://no.wikipedia.org/wiki/Fylkesnummer
-    const defaultGeocoderCountyIds = ['03','30','34','38'];
-
-    // Transportation modes to geocoder stop categories
-    const transportModeGeocoderCategories = {
-        'bus': ['onstreetBus','busStation','coachStation'],
-        'tram': ['onstreetTram', 'tramStation'],
-        'rail': ['railStation'],
-        'metro': ['metroStation']
-    };
-
-    /* Display language translations for transportation modes */
-    const TransportMode = function(mode, name, place, iconHref) {
-        this.mode = function() { return mode; };
-        this.name = function(capitalize) {
-            return capitalize ? name.charAt(0).toUpperCase() + name.slice(1) : name;
-        };
-        this.place = function(capitalize) {
-            return capitalize ?
-                place.charAt(0).toUpperCase() + place.slice(1) : place;
-        };
-        this.iconHref = function() { return iconHref; };
-    };
-    
-    this.transportModes = {
-        'bus': new TransportMode('bus', 'buss', 'holdeplass', ''),
-        'tram': new TransportMode('tram', 'trikk', 'holdeplass', ''),
-        'metro': new TransportMode('metro', 't-bane', 'stasjon', ''),
-        'rail': new TransportMode('rail', 'tog', 'stasjon', '')
-    };
-
-    // Make trips query limited by 'from', 'to' and a single mode of transportation
-    this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
-        return {
-            query: `query trips($from: Location!, $to: Location!, $modes: [Mode], $numTripPatterns: Int = 3)
-                {
-                  trip(from: $from, to: $to, modes: $modes, numTripPatterns: $numTripPatterns) {
-                    tripPatterns {
-                      startTime
-                      duration
-                      legs {
-                        authority {
-                          name
-                        }
-                        fromPlace {
-                          name
-                        }
-                        toPlace {
-                          name
-                        }
-                        fromEstimatedCall {
-                          expectedDepartureTime
-                          aimedDepartureTime
-                          destinationDisplay {
-                            frontText
-                          }
-                          quay {
-                            publicCode
-                          }
-                        }
-                        line {
-                          name
-                          id
-                          publicCode
-                          presentation {
-                            colour
-                            textColour
-                          }
-                        }
-                        mode
-                      }
-                    }
-                  }
-                }`,
-            variables: {
-                from: {
-                    place: fromPlaceId
-                },
-                to: {
-                    place: toPlaceId
-                },
-                modes: (mode ? [mode] : null),
-                numTripPatterns: (numTripPatterns ? numTripPatterns : null)
-            }
-        };
-    }
-
-    const getEnturClientName = function() {
-        return window.location.hostname ?
-            window.location.hostname.replace(/[.-]/g, '_') + ' - private' : 'unknown - private';
-    };
-
-    const throttledDispatcher = new ThrottledDispatcher(1, 100);
-    
-    /* Post to JourneyPlanner API: GraphQL payload wrapped in JSON container.
-       This function throttles number of concurrent requests to avoid request
-       rate penalties from JourneyPlanner API. It returns a promise.
-    */
-    this.fetchJourneyPlannerResults = function(graphqlQuery) {
-        return throttledDispatcher.enqueue(function() {
-            return $.post({
-                url: journeyPlannerApi,
-                data: JSON.stringify(graphqlQuery),
-                dataType: 'json',
-                contentType: 'application/json',
-                headers: { 'ET-Client-Name': getEnturClientName() },
-            });
-        });
-    };
-
-    /* Geocoder autocomplete for stops.
-       Results are simplified to only contain list of labels and stop ids
-    */
-    this.fetchGeocoderResults = function(text, successCallback, transportMode, countyIds) {
-
-        const params = self.getGeocoderAutocompleteApiParams(transportMode, countyIds);
-        params.text = text;
-        
-        return $.get({
-            url: geocoderAutocompleteApi,
-            data: params,
-            headers: self.getGeocoderAutocompleteApiHeaders(),
-            success: function(data) {
-                successCallback(data.features.map(function(feature) {
-                    return {
-                        'label': feature.properties.label,
-                        'stopPlaceId': feature.properties.id
-                    };
-                }));
-            }
-        });
-    };
-
-    this.getGeocoderAutocompleteApiUrl = function() {
-        return geocoderAutocompleteApi;
-    };
-
-    this.getGeocoderAutocompleteApiQueryParamName = function() {
-        return 'text';
-    };
-
-    /* Returns object with jQuery AJAX settings for a geocoder request */
-    this.getGeocoderAutocompleteApiParams = function(transportMode, countyIds) {
-        if (!countyIds) {
-            countyIds = defaultGeocoderCountyIds;
-        }
-        return {
-            'boundary.county_ids': countyIds.join(','),
-            'size': 20,
-            'layers': 'venue',
-            'categories': transportModeGeocoderCategories[transportMode].join(',')
-        };
-    };
-
-    /* Returns required http-headers for geocoder API calls */
-    this.getGeocoderAutocompleteApiHeaders = function() {
-        return {
-            'ET-Client-Name': getEnturClientName()
-        };
-    };
-    
-};
+/* Expected globals:
+   - Entur: instance of Entur API functions
+   - Storage: instance of Storage API
+*/
 
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
 const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
@@ -368,27 +73,44 @@ const ViewportUtils = {
     }
 };
 
+
+/**
+ * @returns a jQuery-wrapped heading element for the departure
+ */
+function getDepartureHeading(departure) {
+    let title = '';
+    if (departure.placeFrom && departure.placeFrom.name) {
+        title = 'Fra ' + departure.placeFrom.name.replace(/,.*$/,'');
+    }
+    if (departure.placeTo && departure.placeTo.name) {
+        if (!title) {
+            title = '...';
+        }
+        title += ' til ' + departure.placeTo.name.replace(/,.*$/,'');
+    }
+    if (!title) {
+        title = 'Ny avgang';
+    }
+    return $('<h2/>', { class: 'departureHeading' })
+        .text(title)
+        .append($('<span/>', { class: 'departureHeading__transportMode' })
+                .addClass('transportMode__' + departure.mode)
+                .text(Entur.transportModes[departure.mode].name(true)));
+}
+
 /* Departure input form support. */
-const DepartureInput = new (function(Entur) {
+const DepartureInput = new (function() {
 
     const self = this;
 
     const getNewDepartureForm = function(transportMode, addCallback) {
         const modeDesc = Entur.transportModes[transportMode];
 
-        // Title
-        const titleInputLabel = $('<label/>', { for: 'titleInput' }).text('Tittel (automatisk generert)');
-        const titleInput = $('<input/>', {
-            id: 'titleInput',
-            type: 'text',
-            readonly: 'readonly',
-            title: titleInputLabel.text(),
-            placeholder: 'Ny avgang med ' + modeDesc.name()
-        });
-
         // Stop place from
-        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' }).text('Fra ' + modeDesc.place());
-        const placeFromInvalid = $('<span/>', {id:'placeFromInvalid', class:'invalid'}).text('Ikke funnet.');
+        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' })
+                  .text('Fra ' + modeDesc.place());
+        const placeFromInvalid = $('<span/>', {id:'placeFromInvalid', class:'invalid'})
+                  .text('Ikke funnet.').hide();
         const placeFromInput = $('<input/>', {
             id: 'placeFromInput',
             type: 'text',
@@ -399,8 +121,10 @@ const DepartureInput = new (function(Entur) {
         });
 
         // Stop place to
-        const placeToInputLabel = $('<label/>', { for: 'placeToInput' }).text('Til ' + modeDesc.place());
-        const placeToInvalid = $('<span/>', {id:'placeToInvalid', class:'invalid'}).text('Ikke funnet.');
+        const placeToInputLabel = $('<label/>', { for: 'placeToInput' })
+                  .text('Til ' + modeDesc.place());
+        const placeToInvalid = $('<span/>', {id:'placeToInvalid', class:'invalid'})
+                  .text('Ikke funnet.').hide();
         const placeToInput = $('<input/>', {
             id: 'placeToInput',
             type: 'text',
@@ -410,18 +134,17 @@ const DepartureInput = new (function(Entur) {
             ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
         });
 
-        const updateTitle = function() {
-            var title = '';
-            if (placeFromInput.data('stopPlace')) {
-                title = 'Fra ' + placeFromInput.data('stopPlace').replace(/,.*$/,'');
-            }
-            if (placeToInput.data('stopPlace')) {
-                if (!title) {
-                    title = '...';
-                }
-                title += ' til ' + placeToInput.data('stopPlace').replace(/,.*$/,'');
-            }
-            titleInput.val(title);
+        const updateHeading = function() {
+            const heading = getDepartureHeading({
+                placeFrom: {
+                    name: placeFromInput.data('stopPlace')
+                },
+                placeTo: {
+                    name: placeToInput.data('stopPlace')
+                },
+                mode: transportMode
+            }).attr('id', 'newDepartureHeading');
+            $('#newDepartureHeading').replaceWith(heading);
         };
 
         const validateInputs = function(ev) {
@@ -450,13 +173,13 @@ const DepartureInput = new (function(Entur) {
         
         const fromAutocomplete = new GeocoderAutocomplete(placeFromInput, transportMode, Entur, function(s) {
             $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateTitle();
+            updateHeading();
         }, function() {
             $(this).data('stopPlaceId', null).data('stopPlace', null);
         });
         const toAutocomplete = new GeocoderAutocomplete(placeToInput, transportMode, Entur, function(s) {
             $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateTitle();
+            updateHeading();
         }, function() {
             $(this).data('stopPlaceId', null).data('stopPlace', null);
         });
@@ -464,8 +187,12 @@ const DepartureInput = new (function(Entur) {
         return $('<form/>', { 'id': 'newDepartureForm',
                               'class': 'newDeparture',
                               'autocomplete': 'off' }) // Disable native "history" auto-completion
-            .append(titleInput, titleInputLabel)
-            .append($('<ul/>',{class:'departureList'})
+            .append(getDepartureHeading({
+                placeFrom: {},
+                placeTo: {},
+                mode: transportMode
+            }).attr('id', 'newDepartureHeading'))
+            .append($('<ul/>',{ class:'departureList' })
                     .append($('<li/>').append(placeFromInput, placeFromInputLabel, placeFromInvalid),
                             $('<li/>').append(placeToInput, placeToInputLabel, placeToInvalid)))
             .append($('<button/>', {
@@ -496,7 +223,6 @@ const DepartureInput = new (function(Entur) {
                         stopId: placeToInput.data('stopPlaceId'),
                         name: placeToInput.data('stopPlace')
                     },
-                    title: titleInput.val(),
                     mode: transportMode
                 });
                 return true;
@@ -518,7 +244,7 @@ const DepartureInput = new (function(Entur) {
                   }));
     };
     
-})(Entur);
+})();
 
 /* Dropdown menus support. */
 const DropdownMenu = new function() {
@@ -576,15 +302,15 @@ const DropdownMenu = new function() {
 // Compat with Safari/IOS
 Date.parseIsoCompatible = function(iso8601) {
     return new Date(iso8601.replace(/\+([0-9]{2})([0-9]{2})$/, "+$1:$2"));
-}
+};
 Date.prototype.diffMinutes = function(laterDate) {
     return Math.floor((laterDate - this) / 1000 / 60);
-}
+};
 Date.prototype.hhmm = function() {
     var mins = this.getMinutes() < 10 ? '0' + this.getMinutes() : this.getMinutes();
     var hours = this.getHours() < 10 ? '0' + this.getHours() : this.getHours();
     return hours + ':' + mins;
-}
+};
 
 function getPlatformElement(trip) {
     return (trip.legs[0].fromEstimatedCall.quay &&
@@ -635,13 +361,12 @@ function getTimeElements(trip, displayMinutesToStart) {
 function getDepartureSection(d) {
     return $('<section/>', {id: 'departure-' + d.id, class: 'departure'})
         .data('id', d.id)
-        .data('title', d.title)
         .data('placeFromId', d.placeFrom.stopId)
         .data('placeFromName', d.placeFrom.name)
         .data('placeToId', d.placeTo.stopId)
         .data('placeToName', d.placeTo.name)
         .data('mode', d.mode)
-        .append($('<h2/>', {class:'departureHeading'}).text(d.title))
+        .append(getDepartureHeading(d))
         .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
             '&#x2b; / &#x2212;': function(ev) {
                 showMoreOrLess($('#departure-' + d.id));
@@ -701,11 +426,6 @@ function reverseDepartureInStorage(departure) {
     const tmp = departure.placeTo;
     departure.placeTo = departure.placeFrom;
     departure.placeFrom = tmp;
-    // TODO consolidate with code in input form that does the same
-    departure.title = 'Fra '
-        + departure.placeFrom.name.replace(/,.*/,'')
-        + ' til '
-        + departure.placeTo.name.replace(/,.*/,'');
     return Storage.saveDeparture(departure);
 }
 
@@ -814,7 +534,6 @@ function renderApp() {
                 stopId: newDep.placeTo.stopId,
                 name: newDep.placeTo.name
             },
-            title: newDep.title,
             mode: newDep.mode
         });
         renderApp();
@@ -824,31 +543,15 @@ function renderApp() {
     DepartureInput.getNewDepartureButtons(addCallback).appendTo(appContent);
 }
 
-// Boot strap: load deps, setup events and trigger initial rendering of departures
-(function loadJQuery(onJQueryLoaded) {
-
-    const head = document.getElementsByTagName('head')[0];
-    const baseUrl = document.currentScript.src.replace(/[^\/]*$/, '');
-
-    const script = document.createElement('script');
-    script.src = baseUrl + 'jquery-3.6.0.min.js';
-    script.onload = function(ev) {
-        const script = document.createElement('script');
-        script.src = baseUrl + 'jquery.autocomplete.min.js';
-        script.onload = onJQueryLoaded;
-        head.appendChild(script);
-    };
-    head.appendChild(script);
-
-})(function() {
-    $(document).ready(function() {
-        renderApp();
-        updateDepartures();
-        $('header').click(function(ev) { updateDepartures(true); });
-        $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
-    });
-});
+/* Application entry point, called after dependencies have been loaded and DOM
+ * is ready. */
+function appInit() {
+    renderApp();
+    updateDepartures(); 
+    $('header').click(function(ev) { updateDepartures(true); });
+    $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
+}
 
 /* Local Variables: */
-/* js2-additional-externs: ("$") */
+/* js2-additional-externs: ("$" "Storage" "Entur") */
 /* End: */
