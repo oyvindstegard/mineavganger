@@ -22,6 +22,7 @@ header {
     position: absolute;
     top: 0;
     left: 0;
+    box-sizing: border-box;
     width: 100%;
     color:#FFFFFF;
     white-space: nowrap;
@@ -134,32 +135,6 @@ section.departure {
     padding: 0;
     margin-bottom: 0;
 }
-.transportMode__bus {
-    color: #FFFFFF;
-    background-color: #E60030;
-}
-.transportMode__tram {
-    color: #FFFFFF;
-    background-color: #00bfff;
-}
-.transportMode__metro {
-    color: #000000;
-    background-color: #faebd7;
-}
-.transportMode__rail {
-    color: #FFFFFF;
-    background-color: #008b45;
-}
-.departureHeading__transportMode {
-    margin-left: 1rem;
-    padding-left: 0.2rem;
-    padding-right: 0.2rem;
-    border-radius: 2px;
-    box-shadow: 0 0 2px #333;
-    vertical-align: middle;
-    margin-right: 0.2rem;
-    font-size: 0.75rem;
-}
 .departureList {
     list-style-type: none;
     border-left: 1px solid #CCCCCC;
@@ -221,6 +196,7 @@ button {
 /* DropdownMenu */
 .Dropdown__container {
     float: right;
+    margin-top: 1rem;
     margin-right: 1rem;
     margin-left: 0.5rem;
 }

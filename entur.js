@@ -64,7 +64,7 @@ const Entur = new function() {
     };
 
     /* Display language translations for transportation modes */
-    const TransportMode = function(mode, name, place, iconHref) {
+    const TransportMode = function(mode, name, place, symbolEntity) {
         this.mode = function() { return mode; };
         this.name = function(capitalize) {
             return capitalize ? name.charAt(0).toUpperCase() + name.slice(1) : name;
@@ -73,14 +73,14 @@ const Entur = new function() {
             return capitalize ?
                 place.charAt(0).toUpperCase() + place.slice(1) : place;
         };
-        this.iconHref = function() { return iconHref; };
+        this.symbolEntity = function() { return symbolEntity; };
     };
     
     this.transportModes = {
-        'bus': new TransportMode('bus', 'buss', 'holdeplass', ''),
-        'tram': new TransportMode('tram', 'trikk', 'holdeplass', ''),
-        'metro': new TransportMode('metro', 't-bane', 'stasjon', ''),
-        'rail': new TransportMode('rail', 'tog', 'stasjon', '')
+        'bus': new TransportMode('bus', 'buss', 'holdeplass', '&#x1f68c;'),
+        'tram': new TransportMode('tram', 'trikk', 'holdeplass', '&#x1F68B;'),
+        'metro': new TransportMode('metro', 't-bane', 'stasjon', '&#x1F687;'),
+        'rail': new TransportMode('rail', 'tog', 'stasjon', '&#x1F686;')
     };
 
     // Make trips query limited by 'from', 'to' and a single mode of transportation

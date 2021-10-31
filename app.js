@@ -80,7 +80,7 @@ const ViewportUtils = {
 function getDepartureHeading(departure) {
     let title = '';
     if (departure.placeFrom && departure.placeFrom.name) {
-        title = 'Fra ' + departure.placeFrom.name.replace(/,.*$/,'');
+        title = 'fra ' + departure.placeFrom.name.replace(/,.*$/,'');
     }
     if (departure.placeTo && departure.placeTo.name) {
         if (!title) {
@@ -89,13 +89,12 @@ function getDepartureHeading(departure) {
         title += ' til ' + departure.placeTo.name.replace(/,.*$/,'');
     }
     if (!title) {
-        title = 'Ny avgang';
+        title = 'Ny avgang med ' +  Entur.transportModes[departure.mode].name();
+    } else {
+        title = Entur.transportModes[departure.mode].name(true) + ' ' + title;
     }
-    return $('<h2/>', { class: 'departureHeading' })
-        .text(title)
-        .append($('<span/>', { class: 'departureHeading__transportMode' })
-                .addClass('transportMode__' + departure.mode)
-                .text(Entur.transportModes[departure.mode].name(true)));
+    
+    return $('<h2/>', { class: 'departureHeading' }).text(title);
 }
 
 /* Departure input form support. */
