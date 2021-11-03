@@ -9,7 +9,9 @@ egen personlige avgangstavle for kollektivreiser i Norge. I form av en enkel og
 tilstandsløs webapplikasjon. All kode er JavaScript/HTML og applikasjonen
 trenger ingen backend annet enn Enturs åpent tilgjengelige API-er.
 
-![Screenshot](https://stegard.net/dl/mineavganger3.png)
+Applikasjonen kan installeres som en PWA-app på mobile enheter.
+
+![Screenshot](mineavganger_mobile_screenshot.png)
 
 ## Motivasjon
 
@@ -22,6 +24,8 @@ trenger ingen backend annet enn Enturs åpent tilgjengelige API-er.
    mobilapp for *det også*.
 
 3. Utforske Entur.org sitt JourneyPlanner API og GraphQL.
+
+4. Utforske Progressive Web Apps (PWA) på mobile enheter.
 
 
 ## Hvor
@@ -56,9 +60,7 @@ løser problemet.
 
 ### TODO
 
-- PWA (web app manifest)
-- Vise avvik for avgang hvis de finnes.
+- Vise avviksmeldinger for avgang hvis de finnes.
 - Mulighet for eksportere avganger som URL som kan deles.
-- Fikse meny-ikon ved skalering og fungere generelt bedre ved brukerskalering.
-- Sjekke om det finnes avganger før bruker legger til.
+- Sjekke om det finnes avganger før bruker trykker "legg til".
 - Rydde i CSS.
