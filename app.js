@@ -71,6 +71,7 @@ const ViewportUtils = {
             window.scrollBy(0, pixelsBelow + 10);
         }
     }
+
 };
 
 
@@ -379,6 +380,7 @@ function getDepartureSection(d) {
         .data('placeToId', d.placeTo.stopId)
         .data('placeToName', d.placeTo.name)
         .data('mode', d.mode)
+        .data('numTrips', d.numTrips || 3)
         .append(getDepartureHeading(d))
         .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
             '&#x2b; / &#x2212;': function(ev) {
@@ -391,11 +393,15 @@ function getDepartureSection(d) {
             },
             'Topp': function(ev) {
                 Storage.moveFirst(d.id);
-                $('#departure-' + d.id).detach().prependTo($('main'));
+                $('#departure-' + d.id).detach()
+                    .prependTo($('main'))[0]
+                    .scrollIntoView();
             },
             'Bunn': function(ev) {
                 Storage.moveLast(d.id);
-                $('#departure-' + d.id).detach().insertBefore($('#newDepartureButtons'));
+                $('#departure-' + d.id).detach()
+                    .insertBefore($('#newDepartureButtons'))[0]
+                    .scrollIntoView();
             },
             'Slett': function(ev) {
                 ev.preventDefault();
@@ -433,6 +439,10 @@ function showMoreOrLess(el) {
     } else {
         updateDeparture(el.data('numTrips', 3));
     }
+    // Persist state
+    const d = Storage.getDeparture(el.data('id'));
+    d.numTrips = el.data('numTrips');
+    Storage.saveDeparture(d);
 }
 
 function reverseDepartureInStorage(departure) {
@@ -566,5 +576,5 @@ function appInit() {
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "Storage" "Entur") */
+/* js2-additional-externs: ("$" "jQuery" "Storage" "Entur") */
 /* End: */
