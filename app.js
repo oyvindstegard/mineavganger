@@ -147,7 +147,7 @@ const DepartureInput = new (function() {
         };
 
         const validateInputs = function(ev) {
-            var ok = true;
+            let ok = true;
 
             if (placeFromInput.val() !== placeFromInput.data('stopPlace')) {
                 placeFromInvalid.show();
@@ -171,14 +171,28 @@ const DepartureInput = new (function() {
         };
         
         const fromAutocomplete = new GeocoderAutocomplete(placeFromInput, transportMode, Entur, function(s) {
+            // 'this' is bound to element on which event occurs
+            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
+            
             $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
             updateHeading();
-        }, function() {
+
+            if (placeFromInput.val() && valueIsChanged) {
+                placeToInput.focus();
+            }
+        }, function(e) {
             $(this).data('stopPlaceId', null).data('stopPlace', null);
         });
         const toAutocomplete = new GeocoderAutocomplete(placeToInput, transportMode, Entur, function(s) {
+            // 'this' is bound to element on which event occurs
+            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
+            
             $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
             updateHeading();
+
+            if (placeToInput.val() && valueIsChanged) {
+                $('#departureSubmit').focus();
+            }
         }, function() {
             $(this).data('stopPlaceId', null).data('stopPlace', null);
         });

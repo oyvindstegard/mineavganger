@@ -56,10 +56,9 @@ løser problemet.
 
 ### TODO
 
-- Ikoner (eller tekst) som beskriver transporttype per avgang.
 - PWA (web app manifest)
 - Vise avvik for avgang hvis de finnes.
-- Mulighet for eksportere avganger som URL som kan bokmerkes.
+- Mulighet for eksportere avganger som URL som kan deles.
 - Fikse meny-ikon ved skalering og fungere generelt bedre ved brukerskalering.
 - Sjekke om det finnes avganger før bruker legger til.
 - Rydde i CSS.
