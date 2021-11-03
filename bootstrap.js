@@ -1,5 +1,5 @@
 /**********************************************************************************
- *  Boot strap: load deps in list order and trigger app init
+ *  Boot strap: load deps in list order, trigger app init and register sw
  **********************************************************************************
  */
 
@@ -34,6 +34,15 @@ const dependencies = ['jquery-3.6.0.min.js',
 })(function() {
     $(document).ready(appInit);
 });
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker
+            .register('serviceworker.js')
+            .then(function(r) { console.log("Service Worker registered for scope " + r.scope); })
+            .catch(function() { console.log("Service worker registration failed"); });
+    });
+}
 
 /* Local Variables: */
 /* js2-additional-externs: ("$" "appInit") */
