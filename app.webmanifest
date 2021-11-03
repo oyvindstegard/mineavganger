@@ -6,6 +6,7 @@
     "short_name": "mine avganger",
     "description": "Denne applikasjonen er ikke en ruteplanlegger. Men den kan brukes til å lage en personlig liste med avganger fra et stoppested til et annet.",
     "display": "standalone",
+    "theme_color": "#E60030",
     "icons": [
         {
             "sizes": "128x128",
