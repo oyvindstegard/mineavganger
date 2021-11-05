@@ -70,8 +70,10 @@ const ViewportUtils = {
         if (pixelsBelow > -10) {
             window.scrollBy(0, pixelsBelow + 10);
         }
+    },
+    scrollToTop: function() {
+        window.scroll(0,0);
     }
-
 };
 
 
@@ -393,16 +395,15 @@ function getDepartureSection(d) {
             },
             'Topp': function(ev) {
                 Storage.moveFirst(d.id);
-                $('#departure-' + d.id).detach()
-                    .prependTo($('main'))[0]
-                    .scrollIntoView();
+                $('#departure-' + d.id).detach().prependTo($('main'));
+                ViewportUtils.scrollToTop();
             },
             'Bunn': function(ev) {
                 Storage.moveLast(d.id);
                 $('#departure-' + d.id).detach()
                     .insertBefore($('#newDepartureButtons'))[0]
                     .scrollIntoView();
-            },
+           },
             'Slett': function(ev) {
                 ev.preventDefault();
                 Storage.removeDeparture(d.id);
