@@ -52,7 +52,7 @@ Alternativt serves også appen <a href="https://mineavganger.no/">herfra</a>.
 
 5. En nettleser/mobil.
 
-## Utvikling
+## Utviklin
 
 Dersom du synes applikasjonen er nyttig må du gjerne fortelle om det. Og du kan
 selvfølgelig rapportere om feil/mangler her, eller lage en pull-request som
@@ -61,6 +61,8 @@ løser problemet.
 ### TODO
 
 - Vise avviksmeldinger for avgang hvis de finnes.
+- Animere endringer i avgangslisten med CSS for å gjøre det enklere å se hva som
+  skjer.
 - Mulighet for eksportere avganger som URL som kan deles.
 - Sjekke om det finnes avganger før bruker trykker "legg til".
-- Rydde i CSS.
+
