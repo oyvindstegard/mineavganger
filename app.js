@@ -73,9 +73,40 @@ const ViewportUtils = {
             window.scrollBy(0, pixelsBelow + 10);
         }
     },
+    
     scrollToTop: function() {
         window.scroll(0,0);
     }
+};
+
+/**
+ * Attaches touch event handlers to window and invokes
+ * provided callback if a touch swipe down is detected.
+ * The callback is not provided with any arguments and 'this' is
+ * bound to the window.
+ */
+const WindowSwipeDownFromTopHandler = function(callback) {
+    let startY;
+
+    const touchStartHandler = function(ev) {
+        startY = ev.changedTouches[0].pageY;
+    };
+
+    const touchEndHandler = function(ev) { 
+        let endY = ev.changedTouches[0].pageY;
+
+        if (startY !== -1 && (endY - startY) >= 150) {
+            callback();
+        }
+    };
+
+    window.addEventListener('touchstart', touchStartHandler);
+    window.addEventListener('touchend', touchEndHandler);
+
+    this.dispose = function() {
+        window.removeEventListener('touchstart', touchStartHandler);
+        window.removeEventListener('touchend', touchEndHandler);
+    };
 };
 
 
@@ -416,7 +447,7 @@ function getDepartureSection(d) {
                 $('#departure-' + d.id).detach()
                     .insertBefore($('#newDepartureButtons'))[0]
                     .scrollIntoView();
-           },
+            },
             'Slett': function(ev) {
                 ev.preventDefault();
                 Storage.removeDeparture(d.id);
@@ -586,6 +617,7 @@ function appInit() {
     renderApp();
     updateDepartures(); 
     $('header').click(function(ev) { updateDepartures(true); });
+    new WindowSwipeDownFromTopHandler(function() { updateDepartures(true); });
     $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
 }
 
