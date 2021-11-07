@@ -20,6 +20,8 @@
    - Storage: instance of Storage API
 */
 
+const animDuration = 100; // general duration of any animated effect in UI, in ms
+
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
 const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
 
@@ -263,7 +265,7 @@ const DepartureInput = new (function() {
 })();
 
 /* Dropdown menus support. */
-const DropdownMenu = new function() {
+const DropdownMenu = new (function() {
 
     var globalCloseDropdownsHandlerRegistered = false;
     const registerGlobalCloseDropdownsHandler = function () {
@@ -273,7 +275,7 @@ const DropdownMenu = new function() {
             globalCloseDropdownsHandlerRegistered = true;
         }
         $(window).click(function (ev) {
-            $('div.Dropdown__menu').each(function (idx, e) { $(e).hide(); });
+            $('div.Dropdown__menu').each(function (idx, e) { $(e).fadeOut(animDuration); });
         });
     };
 
@@ -296,11 +298,15 @@ const DropdownMenu = new function() {
                         const thisMenuId = 'Dropdown__menu-' + nextId;
                         $('.Dropdown__menu').each(function(idx, e) {
                             if (e.id === thisMenuId) {
-                                if ($(e).toggle().is(':visible')) {
-                                    ViewportUtils.ensureLowerVisibility(e);
+                                if ($(e).is(':visible')) {
+                                    $(e).fadeOut(animDuration);
+                                } else {
+                                    $(e).fadeIn(animDuration, function() {
+                                        ViewportUtils.ensureLowerVisibility(e);
+                                    });
                                 }
                             } else {
-                                $(e).hide();
+                                $(e).fadeOut(animDuration);
                             }
                         });
                     })
@@ -308,11 +314,18 @@ const DropdownMenu = new function() {
             .append($('<div/>', {class: 'Dropdown__menu Dropdown__menuborder',
                                  id: 'Dropdown__menu-' + nextId}
                      ).append($.map(actions, function(val, key) {
-                        return $('<button/>', { class:'Dropdown__item' }).html(key).click(val);
+                         return $('<button/>', { class: 'Dropdown__item' })
+                             .html(key)
+                             .click(function(e) {
+                                 let element = this;
+                                 $('#Dropdown__menu-' + nextId).fadeOut(animDuration, function() {
+                                     val.call(element, e);
+                                 });
+                             });
                     }))
                    );
     };
-};
+})();
 
 // Date extensions
 // Compat with Safari/IOS
