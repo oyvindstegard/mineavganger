@@ -318,11 +318,15 @@ const DropdownMenu = new (function() {
 
         const nextId = ++idSequence;
 
-        return $('<div/>', {class: 'Dropdown__container', id: 'Dropdown__container-' + nextId})
-            .append($('<button/>', {class: 'Dropdown__button',
-                                    id: 'Dropdown__button-' + nextId,
-                                    title: title})
-                    .append($('<img/>', { src: 'menu.svg', width: '16', height: '16', alt: 'Meny-symbol' }))
+        return $('<div/>', { class: 'Dropdown__container',
+                            id: 'Dropdown__container-' + nextId })
+            .append($('<button/>', { class: 'Dropdown__button',
+                                     id: 'Dropdown__button-' + nextId,
+                                     title: title })
+                    .append($('<img/>', { src: 'menu.svg',
+                                          width: '16',
+                                          height: '16',
+                                          alt: 'Meny-symbol' }))
                     .click(function(ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
