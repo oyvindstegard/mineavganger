@@ -140,8 +140,8 @@ const Entur = new function() {
     };
 
     const getEnturClientName = function() {
-        return window.location.hostname ?
-            window.location.hostname.replace(/[.-]/g, '_') + ' - private' : 'unknown - private';
+        return 'private-' + (window.location.hostname ?
+                             window.location.hostname.replace(/[.-]/g, '_') : 'unknown');
     };
 
     const throttledDispatcher = new ThrottledDispatcher(1, 100);
