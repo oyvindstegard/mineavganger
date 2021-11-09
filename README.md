@@ -52,7 +52,7 @@ Alternativt serves også appen <a href="https://mineavganger.no/">herfra</a>.
 
 5. En nettleser/mobil.
 
-## Utviklin
+## Utvikling
 
 Dersom du synes applikasjonen er nyttig må du gjerne fortelle om det. Og du kan
 selvfølgelig rapportere om feil/mangler her, eller lage en pull-request som
