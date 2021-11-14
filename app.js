@@ -399,10 +399,9 @@ function getLineCodeElement(trip) {
         'html': publicCode
     }).css({'color':'#'+fgcolor,'background-color':'#' + bgcolor}).prop('title', name);
 }
-
 function getTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
-    const startTime = Date.parseIsoCompatible(trip.startTime);
+    const startTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.expectedDepartureTime);
     const aimedTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.aimedDepartureTime);
     const minutesDelayed = Math.max(0, aimedTime.diffMinutes(startTime));
     var minutesToStart = Math.max(0, now.diffMinutes(startTime));

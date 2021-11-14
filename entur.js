@@ -90,8 +90,6 @@ const Entur = new function() {
                 {
                   trip(from: $from, to: $to, modes: $modes, numTripPatterns: $numTripPatterns) {
                     tripPatterns {
-                      startTime
-                      duration
                       legs {
                         authority {
                           name
