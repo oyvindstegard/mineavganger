@@ -543,7 +543,7 @@ function updateDeparture(el) {
         }).catch(function(e) {
             $('ul.departureList', el).replaceWith(
                 $('<ul/>', {class: 'departureList'})
-                    .append($('<li/>').html('Ai, noe gikk galt &#x26a0;'))
+                    .append($('<li/>').html('Ai, noe gikk galt &#x26a0;&#xfe0f;'))
                     .append($('<li/>').html('<a href="">Klikk for å forsøke på nytt.</a>')
                             .click(function(ev) {
                                 ev.preventDefault();
