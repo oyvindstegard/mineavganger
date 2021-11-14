@@ -387,7 +387,6 @@ function getPlatformElement(trip) {
         :
         $('<span/>');
 }
-
 function getLineCodeElement(trip) {
     const name = trip.legs[0].fromEstimatedCall.destinationDisplay.frontText;
     const publicCode = trip.legs[0].line.publicCode;
@@ -419,6 +418,72 @@ function getTimeElements(trip, displayMinutesToStart) {
         'html': (minutesDelayed > 0 ? '<strike>'+aimedTime.hhmm()+'</strike><span class="startTimeDelayed">' + startTime.hhmm() + '</span>' : startTime.hhmm())
             + (displayMinutesToStart ? ' (' + minutesToStart + ')' : '')
     });
+}
+
+/**
+ * Collect and transform list of unique situation objects from a set of trip patterns.
+ * Each object in returned list has shape:
+ *  {
+ *    "summary": ""<Summary of situation in Norwegian>"",
+ *    "description": "<Description of situation in Norwegian>",
+ *    "validityPeriod": {
+ *      "startTime": "<timestamp>",
+ *      "endTime": "<timestamp>"
+ *    }
+ *  }
+ *  @returns {Array} list of unique situation objects
+ */
+function collectSituations(tripPatterns) {
+    const situations = [];
+    
+    tripPatterns.forEach(function(tripPattern) {
+        tripPattern.legs.forEach(function(leg) {
+            leg.situations.forEach(function(situation) {
+                const description = situation.description.find(function(description) {
+                    return description.language === 'no';
+                });
+                const summary = situation.summary.find(function(summary) {
+                    return summary.language === 'no';
+                });
+                if (summary && description) {
+                    if (situations.find(function(s) {
+                        return s.summary === summary.value &&
+                            s.description === description.value;
+                    })) {
+                        return;
+                    }
+                    
+                    situations.push({
+                        summary: summary.value,
+                        description: description.value,
+                        validityPeriod: situation.validityPeriod
+                    });
+                }
+            });
+        });
+    });
+
+    return situations;
+}
+
+/**
+ * Generate a list of situation items from list of situation objects as returned by
+ * {@link collectSituations}.
+ */
+function getSituationListItem(situation) {
+    return $('<li/>', { class: 'situation' })
+        .html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
+        .append($('<a/>', {href:'#'})
+                .text('Vis mer')
+                .click(function(ev) {
+                    ev.preventDefault();
+                    $(this).parent().replaceWith(
+                        $('<li/>', { class: 'situation__expanded' })
+                            .html('&#x26a0;&#xfe0f; ' + situation.description)
+                        
+                    );
+                })
+               );
 }
 
 function getDepartureSection(d) {
@@ -460,7 +525,8 @@ function getDepartureSection(d) {
                 }
             }
         }))
-        .append($('<ul/>', {class:'departureList'}));
+        .append($('<ul/>', {class:'departureList'}),
+                $('<ul/>', {class:'situationList'}));
 }
 
 function showDepartureLoader(el) {
@@ -471,10 +537,7 @@ function showDepartureLoader(el) {
 }
 
 function spinOnce(el) {
-    if (! (el instanceof jQuery)) {
-        el = $(el);
-    }
-    el.replaceWith(el.clone().addClass('spinonce'));
+    $(el).replaceWith($(el).clone().addClass('spinonce'));
 }
 
 // Expects a departure section element as argument
@@ -526,6 +589,7 @@ function updateDeparture(el) {
                                          getTimeElements(trip, idx < 2),
                                          getPlatformElement(trip));
             });
+
             if (!listItems.length) {
                 const modeDesc = Entur.transportModes[mode];
                 $('ul.departureList', el)
@@ -535,24 +599,29 @@ function updateDeparture(el) {
                                         + ' fra ' + data.placeFromName
                                         + ' til ' + data.placeToName)
                     ));
+                $('ul.situationList', el).remove();
             } else {
-                $('ul.departureList', el)
-                    .replaceWith($('<ul/>', {class: 'departureList'})
-                                 .append(listItems));
+                const situationListItems =
+                      collectSituations(result.data.trip.tripPatterns).map(getSituationListItem);
+                
+                $('ul.departureList', el).replaceWith($('<ul/>', {class: 'departureList'}).append(listItems));
+                $('ul.situationList', el).replaceWith($('<ul/>', {class: 'situationList'}).append(situationListItems));
             }
         }).catch(function(e) {
             $('ul.departureList', el).replaceWith(
                 $('<ul/>', {class: 'departureList'})
-                    .append($('<li/>').html('Ai, noe gikk galt &#x26a0;&#xfe0f;'))
-                    .append($('<li/>').html('<a href="">Klikk for å forsøke på nytt.</a>')
+                    .append($('<li/>').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'))
+                    .append($('<li/>').html('<button>Forsøk på nytt</button>')
                             .click(function(ev) {
                                 ev.preventDefault();
-                                updateDeparture(el);
+                                updateDepartures(true);
                             }))
-                    .append($('<li/>', {class:'technical'})
-                            .html('Feil: [' + data.placeFromId + '] &#x2192; [' + data.placeToId + ']: '
-                                  + e.statusText))
-                    );
+                    .append($('<li/>', {
+                        class:'technical',
+                        html: 'Feil: [' + data.placeFromId + '] &#x2192; [' +
+                            data.placeToId + ']: ' + e.statusText
+                    })));
+            $('ul.situationList', el).remove();
         }).then(function() {
             el.data('loading', false);
         });

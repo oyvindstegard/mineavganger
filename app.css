@@ -144,6 +144,13 @@ section.departure {
 .departureList li {
     margin-bottom: 0.25rem;
 }
+.situationList {
+    list-style-type: none;
+    padding-left: 0;
+}
+.situationList li {
+    margin-bottom: 0.7rem;
+}
 
 .newDeparture {
     margin-top: 2rem;
