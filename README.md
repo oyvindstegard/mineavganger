@@ -60,9 +60,6 @@ løser problemet.
 
 ### TODO
 
-- Vise avviksmeldinger for avgang hvis de finnes.
-- Animere endringer i avgangslisten med CSS for å gjøre det enklere å se hva som
-  skjer.
+- Animere endringer i avgangslisten.
 - Mulighet for eksportere avganger som URL som kan deles.
 - Sjekke om det finnes avganger før bruker trykker "legg til".
-

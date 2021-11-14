@@ -84,14 +84,13 @@ const Entur = new function() {
     };
 
     // Make trips query limited by 'from', 'to' and a single mode of transportation
+    // Returns an object with keys 'query' and 'variables'.
     this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
         return {
             query: `query trips($from: Location!, $to: Location!, $modes: [Mode], $numTripPatterns: Int = 3)
                 {
                   trip(from: $from, to: $to, modes: $modes, numTripPatterns: $numTripPatterns) {
                     tripPatterns {
-                      startTime
-                      duration
                       legs {
                         authority {
                           name
@@ -119,6 +118,20 @@ const Entur = new function() {
                           presentation {
                             colour
                             textColour
+                          }
+                        }
+                        situations {
+                          summary {
+                            value
+                            language
+                          }
+                          description {
+                            value
+                            language
+                          }
+                          validityPeriod {
+                            startTime
+                            endTime
                           }
                         }
                         mode
