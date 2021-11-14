@@ -1,9 +1,20 @@
-:CLIENT = stegard_net - private
-:URL = https://api.entur.io/journey-planner/v2/graphql
+# REST client scratch pad for exploring journey planner and geocoder APIs
+# -*- mode: restclient -*-
 
-# Fra Tusenfryd til Oslo Bussterminal
-POST :URL
-ET-Client-Name: :CLIENT
+:CLIENT_H = ET-Client-Name: private-stegard_net
+:JP_URL = https://api.entur.io/journey-planner/v2/graphql
+:GC_URL = https://api.entur.io/geocoder/v1/autocomplete?boundary.county_ids=03,30,34,38&size=20&layers=venue&categories=:c&text=:q
+
+# Geocoder
+:q = ryen
+:c = onstreetBus,busStation,coachStation
+GET :GC_URL
+:CLIENT_H
+#
+
+# Fra Tusenfryd til Oslo Bussterminal med Ruter
+POST :JP_URL
+:CLIENT_H
 Accept: application/json
 Content-type: application/graphql
 
@@ -60,70 +71,54 @@ Content-type: application/graphql
     }
   }
 }
+#
 
-# Fra Oslo Bussterminal til Tusenfryd
-POST :URL
-ET-Client-Name: :CLIENT
+# Buss fra Skullerud til Ryen, kun eventuelle avvik.
+POST :JP_URL
+:CLIENT_H
 Accept: application/json
 Content-type: application/graphql
 
 {
   trip(
     from: {
-      place: "NSR:StopPlace:6505"
-      name: "Oslo Bussterminal"
+      place: "NSR:StopPlace:58227"
+      name: "Skullerud"
     }
     to: {
-      place: "NSR:StopPlace:5143"
-      name: "TusenFryd"
+      place: "NSR:StopPlace:58248"
+      name: "Ryen"
     }
-    # Bare Ruter-linjer
-    whiteListed: {
-      authorities:["RUT:Authority:RUT"]
-    }
+    modes: [bus]
     numTripPatterns: 3
   )
   {
     tripPatterns {
-      startTime
-      duration
       legs {
-        authority {
-          name
-        }
-        fromPlace {
-          name
-        }
-        fromEstimatedCall {
-          expectedDepartureTime
-          destinationDisplay {
-            frontText
-          }
-          serviceJourney {
-            line {
-              presentation {
-                colour
-              }
-            }
-          }
-        }
-        toPlace {
-          name
-        }
-        line {
-          name
+        situations {
           id
-          publicCode
-        }
-        mode
+          summary {
+            value
+            language
+          }
+          description {
+            value
+            language
+          }
+          validityPeriod {
+            startTime
+            endTime
+          }
+          reportType
+        }        
       }
     }
   }
 }
 
 # Fra A. Kiellands
-POST :URL
-ET-Client-Name: :CLIENT
+POST :JP_URL
+:CLIENT_H
 Accept: application/json
 Content-type: application/graphql
 
@@ -179,10 +174,72 @@ Content-type: application/graphql
     }
   }
 }
+#
+
+# Fra Tusenfryd til Oslo Bussterminal med Ruter
+POST :JP_URL
+:CLIENT_H
+Accept: application/json
+Content-type: application/graphql
+
+{
+  trip(
+    from: {
+      place: "NSR:StopPlace:5143"
+      name: "TusenFryd"
+    }
+    to: {
+      place: "NSR:StopPlace:6505"
+      name: "Oslo Bussterminal"
+    }
+    # Bare Ruter-linjer
+    whiteListed: {
+      authorities:["RUT:Authority:RUT"]
+    }
+    numTripPatterns: 3
+  )
+  {
+    tripPatterns {
+      startTime
+      duration
+      legs {
+        authority {
+          name
+        }
+        fromPlace {
+          name
+        }
+        fromEstimatedCall {
+          expectedDepartureTime
+          destinationDisplay {
+            frontText
+          }
+          serviceJourney {
+            line {
+              presentation {
+                colour
+              }
+            }
+          }
+        }
+        toPlace {
+          name
+        }
+        line {
+          name
+          id
+          publicCode
+        }
+        mode
+      }
+    }
+  }
+}
+#
 
 # Get list of valid authorities
-POST :URL
-ET-Client-Name: :CLIENT
+POST :JP_URL
+:CLIENT_H
 Accept: application/json
 Content-Type: application/graphql
 
@@ -190,13 +247,38 @@ Content-Type: application/graphql
    authorities { name, id }
 }
 
-# Get list of valid places
-POST :URL
-ET-Client-Name: :CLIENT
+# Get list of all situations
+POST :JP_URL
+:CLIENT_H
 Accept: application/json
 Content-Type: application/graphql
 
 {
-   stopPlaces(name: "Solli")
-   { name, id }
+   situations(authorities: ["RUT:Authority:RUT"]) {
+     description {
+       value
+       language
+     }
+     validityPeriod {
+       startTime
+       endTime
+     }
+     reportType
+   }
 }
+#
+
+
+# Get list of some stop places
+POST :JP_URL
+:CLIENT_H
+Accept: application/json
+Content-Type: application/graphql
+
+{
+  stopPlaces(ids: ["NSR:StopPlace:5143", "NSR:StopPlace:6505"]) {
+    id
+    name
+  }
+}
+#
