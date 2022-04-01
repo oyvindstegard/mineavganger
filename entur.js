@@ -16,7 +16,7 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
     this.maxConcurrency = maxConcurrency;
     this.delayMillis = delayMillis;
     const self = this;
-    
+
     const queue = [];
     var inFlight = 0;
     var delayTimer = null;
@@ -158,13 +158,14 @@ const Entur = new function() {
     };
 
     const throttledDispatcher = new ThrottledDispatcher(1, 100);
-    
+
     /* Post to JourneyPlanner API: GraphQL payload wrapped in JSON container.
        This function throttles number of concurrent requests to avoid request
        rate penalties from JourneyPlanner API. It returns a promise.
+       A single retry with backoff is also part of this function.
     */
     this.fetchJourneyPlannerResults = function(graphqlQuery) {
-        return throttledDispatcher.enqueue(function() {
+        const request = function() {
             return $.post({
                 url: journeyPlannerApi,
                 data: JSON.stringify(graphqlQuery),
@@ -172,7 +173,18 @@ const Entur = new function() {
                 contentType: 'application/json',
                 headers: { 'ET-Client-Name': getEnturClientName() },
             });
-        });
+        };
+
+        return throttledDispatcher.enqueue(request)
+            .catch(function(err) {
+                console.log(`Warning: journey planner request failed: ${err}`);
+                // Back off 2 secs and retry once
+                return new Promise(function(resolve, reject) {
+                    setTimeout(resolve, 2000);
+                }).then(function() {
+                    return throttledDispatcher.enqueue(request);
+                });
+            });
     };
 
     /* Geocoder autocomplete for stops.
