@@ -497,13 +497,13 @@ function getDepartureSection(d) {
         .data('numTrips', d.numTrips || 3)
         .append(getDepartureHeading(d))
         .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
-            '&#x2b; / &#x2212;': function(ev) {
-                showMoreOrLess($('#departure-' + d.id));
-            },
             'Snu': function(ev) {
-                const reversed = reverseDepartureInStorage(d);
+                const reversed = reverseDepartureInStorage(d.id);
                 $('#departure-' + d.id).replaceWith(getDepartureSection(reversed));
                 updateDeparture($('#departure-' + d.id));
+            },
+            '&#x2b; / &#x2212;': function(ev) {
+                showMoreOrLess($('#departure-' + d.id));
             },
             'Topp': function(ev) {
                 Storage.moveFirst(d.id);
@@ -556,7 +556,8 @@ function showMoreOrLess(el) {
     Storage.saveDeparture(d);
 }
 
-function reverseDepartureInStorage(departure) {
+function reverseDepartureInStorage(departureId) {
+    const departure = Storage.getDeparture(departureId);
     const tmp = departure.placeTo;
     departure.placeTo = departure.placeFrom;
     departure.placeFrom = tmp;
