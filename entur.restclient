@@ -3,7 +3,7 @@
 
 :CLIENT_H = ET-Client-Name: private-stegard_net
 :JP_URL = https://api.entur.io/journey-planner/v2/graphql
-:GC_URL = https://api.entur.io/geocoder/v1/autocomplete?boundary.county_ids=03,30,34,38&size=20&layers=venue&categories=:c&text=:q
+:GC_URL = https://api.entur.io/geocoder/v1/autocomplete?boundary.county_ids=03,31,32,33,34,39,40&size=20&layers=venue&categories=:c&text=:q
 
 # Geocoder
 :q = ryen
@@ -73,7 +73,7 @@ Content-type: application/graphql
 }
 #
 
-# Buss fra Skullerud til Ryen, kun eventuelle avvik.
+# Buss fra Nydalen til Tveita, kun eventuelle avvik.
 POST :JP_URL
 :CLIENT_H
 Accept: application/json
@@ -82,12 +82,12 @@ Content-type: application/graphql
 {
   trip(
     from: {
-      place: "NSR:StopPlace:58227"
-      name: "Skullerud"
+      place: "NSR:StopPlace:59605"
+      name: "Nydalen T"
     }
     to: {
-      place: "NSR:StopPlace:58248"
-      name: "Ryen"
+      place: "NSR:StopPlace:6167"
+      name: "Tveita"
     }
     modes: [bus]
     numTripPatterns: 3
@@ -110,7 +110,7 @@ Content-type: application/graphql
             endTime
           }
           reportType
-        }        
+        }
       }
     }
   }
