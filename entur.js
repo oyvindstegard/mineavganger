@@ -178,9 +178,9 @@ const Entur = new function() {
         return throttledDispatcher.enqueue(request)
             .catch(function(err) {
                 console.log(`Warning: journey planner request failed: ${err}`);
-                // Back off 2 secs and retry once
+                // Back off 5 secs and retry once
                 return new Promise(function(resolve, reject) {
-                    setTimeout(resolve, 2000);
+                    setTimeout(resolve, 5000);
                 }).then(function() {
                     return throttledDispatcher.enqueue(request);
                 });
