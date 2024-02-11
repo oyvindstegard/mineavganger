@@ -398,6 +398,13 @@ function getLineCodeElement(trip) {
         'html': publicCode
     }).css({'color':'#'+fgcolor,'background-color':'#' + bgcolor}).prop('title', name);
 }
+function getSituationSymbolElement(trip) {
+    if (trip.legs[0].situations && trip.legs[0].situations.length) {
+        return $('<span/>', {
+            'html': '&#x26a0;&#xfe0f;'
+        });
+    }
+}
 function getTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
     const startTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.expectedDepartureTime);
@@ -588,9 +595,10 @@ function updateDeparture(el) {
             const listItems = $.map(result.data.trip.tripPatterns, function(trip, idx) {
                 return $('<li/>').append(getLineCodeElement(trip),
                                          getTimeElements(trip, idx < 2),
-                                         getPlatformElement(trip));
+                                         getPlatformElement(trip),
+                                         getSituationSymbolElement(trip));
             });
-
+            
             if (!listItems.length) {
                 const modeDesc = Entur.transportModes[mode];
                 $('ul.departureList', el)
@@ -604,7 +612,7 @@ function updateDeparture(el) {
             } else {
                 const situationListItems =
                       collectSituations(result.data.trip.tripPatterns).map(getSituationListItem);
-                
+
                 $('ul.departureList', el).replaceWith($('<ul/>', {class: 'departureList'}).append(listItems));
                 $('ul.situationList', el).replaceWith($('<ul/>', {class: 'situationList'}).append(situationListItems));
             }
