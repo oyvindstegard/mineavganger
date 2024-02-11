@@ -5,7 +5,7 @@
 
 'use strict';
 
-const dependencies = ['jquery-3.6.0.min.js',
+const dependencies = ['jquery-3.7.1.min.js',
                       'jquery.autocomplete.min.js',
                       'storage.js',
                       'entur.js',
