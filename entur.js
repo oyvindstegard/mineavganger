@@ -1,5 +1,6 @@
 /**********************************************************************************
  * Mineavganger Entur API
+ * Bruker Geocoder V1 og JourneyPlanner V3.
  **********************************************************************************
  */
 
@@ -48,7 +49,7 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
 /* Entur JourneyPlanner and Geocoder APIs. */
 const Entur = new function() {
 
-    const journeyPlannerApi = 'https://api.entur.io/journey-planner/v2/graphql';
+    const journeyPlannerApi = 'https://api.entur.io/journey-planner/v3/graphql';
 
     const geocoderAutocompleteApi = 'https://api.entur.io/geocoder/v1/autocomplete';
 
@@ -87,9 +88,10 @@ const Entur = new function() {
     // Returns an object with keys 'query' and 'variables'.
     this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
         return {
-            query: `query trips($from: Location!, $to: Location!, $modes: [Mode], $numTripPatterns: Int = 3)
+            query: `query trips($from: Location!, $to: Location!, $numTripPatterns: Int = 3, $mode: TransportMode)
                 {
-                  trip(from: $from, to: $to, modes: $modes, numTripPatterns: $numTripPatterns) {
+                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1)
+                  {
                     tripPatterns {
                       legs {
                         authority {
@@ -146,7 +148,7 @@ const Entur = new function() {
                 to: {
                     place: toPlaceId
                 },
-                modes: (mode ? [mode] : null),
+                mode: mode ? mode : null,
                 numTripPatterns: (numTripPatterns ? numTripPatterns : null)
             }
         };

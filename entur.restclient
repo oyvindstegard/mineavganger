@@ -2,7 +2,7 @@
 # -*- mode: restclient -*-
 
 :CLIENT_H = ET-Client-Name: private-stegard_net
-:JP_URL = https://api.entur.io/journey-planner/v2/graphql
+:JP_URL = https://api.entur.io/journey-planner/v3/graphql
 :GC_URL = https://api.entur.io/geocoder/v1/autocomplete?boundary.county_ids=03,31,32,33,34,39,40&size=20&layers=venue&categories=:c&text=:q
 
 # Geocoder
@@ -89,7 +89,7 @@ Content-type: application/graphql
       place: "NSR:StopPlace:6167"
       name: "Tveita"
     }
-    modes: [bus]
+    modes: { transportModes: {transportMode: metro}}
     numTripPatterns: 3
   )
   {
@@ -124,15 +124,16 @@ Content-type: application/graphql
 
 {
   trip(
-    from: {
-      place: "NSR:StopPlace:6288"
-      name: "Alexander Kiellands plass"
-    }
     to: {
-      place: "NSR:StopPlace:59621"
-      name: "Hammersborggata"
+      place: "NSR:StopPlace:5576"
+      name: "Drøbak torg, Frogn"
     }
-    modes: bus
+    from: {
+      place: "NSR:StopPlace:59872"
+      name: "Oslo S, Oslo"
+    }
+    modes: {transportModes: {transportMode: bus}}
+    maximumTransfers: 1
     numTripPatterns: 3
   )
   {
