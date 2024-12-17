@@ -42,7 +42,7 @@ Alternativt serves også appen <a href="https://mineavganger.no/">herfra</a>.
 
 ## Avhengigheter
 
-1. Entur.org åpent JourneyPlanner API: https://api.entur.io/journey-planner/v2/graphql
+1. Entur.org åpent JourneyPlanner API: https://api.entur.io/journey-planner/v3/graphql
 
 2. Entur.org åpent Geocoder API: https://api.entur.io/geocoder/v1/autocomplete
 
