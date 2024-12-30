@@ -323,7 +323,7 @@ const DropdownMenu = new (function() {
             .append($('<button/>', { class: 'Dropdown__button',
                                      id: 'Dropdown__button-' + nextId,
                                      title: title })
-                    .append($('<img/>', { src: 'menu.svg',
+                    .append($('<img/>', { src: 'menu.svg?_V=' + Bootstrap.V,
                                           width: '16',
                                           height: '16',
                                           alt: 'Meny-symbol' }))
@@ -539,7 +539,7 @@ function getDepartureSection(d) {
 function showDepartureLoader(el) {
     const contentHeight = Math.max(32, $(el).height()) + 'px';
     const loaderEl = $('<ul/>', {class:'departureList', height:contentHeight}).append(
-        $('<li/>').append($('<img/>', { src: 'logo.svg', class:'loader' })));
+        $('<li/>').append($('<img/>', { src: 'logo.svg?_V=' + Bootstrap.V, class:'loader' })));
     $(el).replaceWith(loaderEl);
 }
 
@@ -638,6 +638,7 @@ function updateDeparture(el) {
 
 var lastUpdate = null;
 var updateTimeout = null;
+var appUpdateAvailable = false;
 function updateDepartures(userIntent) {
     if (updateTimeout) {
         clearTimeout(updateTimeout);
@@ -654,6 +655,10 @@ function updateDepartures(userIntent) {
 
         lastUpdate = new Date();
         $('#last-updated-info').text(lastUpdate.hhmm());
+
+        if (appUpdateAvailable) {
+            $('#appUpdate').show();
+        }
     }
 
     updateTimeout = setTimeout(updateDepartures, 60000);
@@ -661,6 +666,11 @@ function updateDepartures(userIntent) {
 
 function renderApp() {
     const appContent = $('main').empty();
+
+    $('<section/>', {id:'appUpdate'}).append(
+        $('<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>')
+    ).appendTo(appContent);
+
     Storage.getDepartures().forEach(function (d) {
         getDepartureSection(d).appendTo(appContent);
     });
@@ -668,7 +678,6 @@ function renderApp() {
     $('<section/>', {id:'noDepartures'}).append(
         $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å velge transporttype med knappene under.</p>')
     ).appendTo(appContent);
-
     if (!$('section.departure').length) {
         $('#noDepartures').show();
     }
@@ -692,6 +701,7 @@ function renderApp() {
     DepartureInput.getNewDepartureButtons(addCallback).appendTo(appContent);
 }
 
+
 /* Application entry point, called after dependencies have been loaded and DOM
  * is ready. */
 function appInit() {
@@ -700,8 +710,12 @@ function appInit() {
     $('header').click(function(ev) { updateDepartures(true); });
     new WindowSwipeDownFromTopHandler(function() { updateDepartures(true); });
     $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
+
+    Bootstrap.appUpdateAvailable.then(function() {
+        appUpdateAvailable = true;
+    });
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "jQuery" "Storage" "Entur") */
+/* js2-additional-externs: ("$" "jQuery" "Storage" "Entur" "Bootstrap") */
 /* End: */

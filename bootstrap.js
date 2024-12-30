@@ -1,29 +1,69 @@
-/**********************************************************************************
- *  Boot strap: load deps in list order, trigger app init and register sw
- **********************************************************************************
+/*************************************************************************************
+ * Boot strap: load js-deps in list order, register serviceworker and trigger app init
+ *************************************************************************************
  */
 
 'use strict';
 
-const dependencies = ['jquery-3.7.1.min.js',
-                      'jquery.autocomplete.min.js',
-                      'storage.js',
-                      'entur.js',
-                      'app.js'];
+const Bootstrap = {};
 
-(function loadDependencies(onDependenciesLoaded) {
+Bootstrap.scriptUrl = new URL(document.currentScript.src);
+Bootstrap.basePath = Bootstrap.scriptUrl.pathname.replace(/[^\/]*$/, '');
+Bootstrap.V = Bootstrap.scriptUrl.searchParams.get('_V') ?
+    Bootstrap.scriptUrl.searchParams.get('_V') : '0';
 
+Bootstrap.scriptDependencies = ['jquery-3.7.1.min.js',
+                                'jquery.autocomplete.min.js',
+                                'storage.js',
+                                'entur.js',
+                                'app.js']
+    .map(scriptName => scriptName + '?_V=' + Bootstrap.V);
+
+Bootstrap.serviceWorkerScript = 'serviceworker.js';
+
+Bootstrap.appUpdateAvailable = new Promise((resolve, reject) => {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker
+                .register(Bootstrap.serviceWorkerScript)
+                .then((reg) => {
+                    console.log('Service worker registered for scope ' + reg.scope);
+                    reg.addEventListener('updatefound', () => {
+                        console.log('A new service worker is being installed.');
+                        const installingWorker = reg.installing;
+                        installingWorker.addEventListener('statechange', () => {
+                            if (installingWorker.state === 'installed'
+                                && navigator.serviceWorker.controller) {
+                                resolve(true);
+                            } else {
+                                resolve(false);
+                            }
+                        });
+                    });
+                })
+                .catch(() => {
+                    console.error("Service worker registration failed.");
+                    resolve(false);
+                });
+        });
+        return;
+    }
+
+    resolve(false);
+});
+
+Bootstrap.loadScriptDependencies = (onDependenciesLoaded) => {
+    const deps = Bootstrap.scriptDependencies;
     const head = document.getElementsByTagName('head')[0];
-    const baseUrl = document.currentScript.src.replace(/[^\/]*$/, '');
 
     const firstScript = document.createElement('script');
-    firstScript.src = baseUrl + dependencies[0];
+    firstScript.src = Bootstrap.basePath + deps[0];
 
     let script = firstScript;
-    for (let i=1; i<dependencies.length; i++) {
+    for (let i=1; i<deps.length; i++) {
         const nextScript = document.createElement('script');
         script.onload = function(ev) {
-            nextScript.src = baseUrl + dependencies[i];
+            nextScript.src = Bootstrap.basePath + deps[i];
             head.appendChild(nextScript);
         };
         script = nextScript;
@@ -31,19 +71,12 @@ const dependencies = ['jquery-3.7.1.min.js',
     script.onload = onDependenciesLoaded;
 
     head.appendChild(firstScript);
-})(function() {
+};
+
+Bootstrap.loadScriptDependencies(() => {
     $(document).ready(appInit);
 });
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker
-            .register('serviceworker.js')
-            .then(function(r) { console.log("Service Worker registered for scope " + r.scope); })
-            .catch(function() { console.log("Service worker registration failed"); });
-    });
-}
-
 /* Local Variables: */
-/* js2-additional-externs: ("$" "appInit") */
+/* js2-additional-externs: ("$" "appInit" "URL") */
 /* End: */
