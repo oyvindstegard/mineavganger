@@ -21,6 +21,10 @@ h2 {
     font-size: 1.1rem;
 }
 
+h3 {
+    font-size: 1.0rem;
+}
+
 header {
     position: absolute;
     top: 0;
