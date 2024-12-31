@@ -90,7 +90,7 @@ const Entur = new function() {
         return {
             query: `query trips($from: Location!, $to: Location!, $numTripPatterns: Int = 3, $mode: TransportMode)
                 {
-                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: 180)
+                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: 360)
                   {
                     tripPatterns {
                       legs {
