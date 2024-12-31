@@ -44,7 +44,6 @@ const cacheFirst = async (requestUrl) => {
     const cache = await caches.open(cacheName);
     const responseFromCache = await cache.match(requestUrl);
     if (responseFromCache) {
-        console.log('NEWHIT for URL: ' + requestUrl);
         return responseFromCache;
     }
 
@@ -68,6 +67,7 @@ self.addEventListener('fetch', async (ev) => {
         }
         ev.respondWith(cacheFirst(requestUrl.toString()));
     }
+    
 });
 
 /* Local Variables: */
