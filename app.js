@@ -18,6 +18,7 @@
 /* Expected globals:
    - Entur: instance of Entur API functions
    - Storage: instance of Storage API
+   - Bootstrap: Bootstrap object from bootstrap.js
 */
 
 const animDuration = 100; // general duration of any animated effect in UI, in ms
@@ -519,9 +520,10 @@ function getDepartureSection(d) {
             },
             'Bunn': function(ev) {
                 Storage.moveLast(d.id);
-                $('#departure-' + d.id).detach()
-                    .insertBefore($('#newDepartureButtons'))[0]
-                    .scrollIntoView();
+                const element = $('#departure-' + d.id)
+                                 .detach()
+                                 .insertBefore($('#newDepartureButtons'))[0];
+                ViewportUtils.ensureLowerVisibility(element);
             },
             'Slett': function(ev) {
                 ev.preventDefault();
