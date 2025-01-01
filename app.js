@@ -515,7 +515,7 @@ function getDepartureSection(d) {
             },
             'Topp': function(ev) {
                 Storage.moveFirst(d.id);
-                $('#departure-' + d.id).detach().prependTo($('main'));
+                $('#departure-' + d.id).detach().insertAfter($('#noDepartures'));
                 ViewportUtils.scrollToTop();
             },
             'Bunn': function(ev) {
@@ -667,22 +667,24 @@ function updateDepartures(userIntent) {
 }
 
 function renderApp() {
+    const departures = Storage.getDepartures();
+    
     const appContent = $('main').empty();
 
     $('<section/>', {id:'appUpdate'}).append(
         $('<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>')
     ).appendTo(appContent);
 
-    Storage.getDepartures().forEach(function (d) {
-        getDepartureSection(d).appendTo(appContent);
-    });
-
     $('<section/>', {id:'noDepartures'}).append(
         $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å velge transporttype med knappene under.</p>')
     ).appendTo(appContent);
-    if (!$('section.departure').length) {
+    if (departures.length === 0) {
         $('#noDepartures').show();
     }
+
+    departures.forEach(function (departure) {
+        getDepartureSection(departure).appendTo(appContent);
+    });
 
     const addCallback = function (newDep) {
         Storage.saveDeparture({
