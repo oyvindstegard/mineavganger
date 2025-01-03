@@ -14,6 +14,7 @@ Bootstrap.V = Bootstrap.scriptUrl.searchParams.get('_V') ?
 
 Bootstrap.scriptDependencies = ['jquery-3.7.1.min.js',
                                 'jquery.autocomplete.min.js',
+                                'el.js',
                                 'storage.js',
                                 'entur.js',
                                 'app.js']

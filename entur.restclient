@@ -177,32 +177,23 @@ Content-type: application/graphql
 }
 #
 
-# Fra Tusenfryd til Oslo Bussterminal med Ruter
+# Vestby til Oslo S med tog
 POST :JP_URL
 :CLIENT_H
 Accept: application/json
 Content-type: application/graphql
 
 {
-  trip(
-    from: {
-      place: "NSR:StopPlace:5143"
-      name: "TusenFryd"
-    }
-    to: {
-      place: "NSR:StopPlace:6505"
-      name: "Oslo Bussterminal"
-    }
-    # Bare Ruter-linjer
-    whiteListed: {
-      authorities:["RUT:Authority:RUT"]
-    }
-    numTripPatterns: 3
+trip(
+  from: { place: "NSR:StopPlace:58865" },
+  to: { place: "NSR:StopPlace:59872" },
+  numTripPatterns: 3,
+  modes: { transportModes: {transportMode: rail }},
+  maximumTransfers: 1,
+  searchWindow: 360
   )
   {
     tripPatterns {
-      startTime
-      duration
       legs {
         authority {
           name
@@ -210,33 +201,47 @@ Content-type: application/graphql
         fromPlace {
           name
         }
+        toPlace {
+          name
+        }
         fromEstimatedCall {
           expectedDepartureTime
+          aimedDepartureTime
           destinationDisplay {
             frontText
           }
-          serviceJourney {
-            line {
-              presentation {
-                colour
-              }
-            }
+          quay {
+            publicCode
           }
-        }
-        toPlace {
-          name
         }
         line {
           name
           id
           publicCode
+          presentation {
+            colour
+            textColour
+          }
+        }
+        situations {
+          summary {
+            value
+            language
+          }
+          description {
+            value
+            language
+          }
+          validityPeriod {
+            startTime
+            endTime
+          }
         }
         mode
       }
     }
   }
 }
-#
 
 # Get list of valid authorities
 POST :JP_URL

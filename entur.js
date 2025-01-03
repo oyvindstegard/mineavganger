@@ -84,13 +84,19 @@ const Entur = new function() {
         'rail': new TransportMode('rail', 'tog', 'stasjon', '&#x1F686;')
     };
 
-    // Make trips query limited by 'from', 'to' and a single mode of transportation
+    this.tripQueryDefaults = {
+        'numTripPatterns': 3,
+        'searchWindow': 360,
+    };
+
+    // Makes a trip GraphQL query limited by 'from', 'to' and a single mode of transportation.
     // Returns an object with keys 'query' and 'variables'.
-    this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
+    this.makeTripQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns, searchWindow) {
         return {
-            query: `query trips($from: Location!, $to: Location!, $numTripPatterns: Int = 3, $mode: TransportMode)
+            query: `query trips($from: Location!, $to: Location!, $mode: TransportMode,
+                                $numTripPatterns: Int!, $searchWindow: Int!)
                 {
-                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: 360)
+                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: $searchWindow)
                   {
                     tripPatterns {
                       legs {
@@ -149,7 +155,10 @@ const Entur = new function() {
                     place: toPlaceId
                 },
                 mode: mode ? mode : null,
-                numTripPatterns: (numTripPatterns ? numTripPatterns : null)
+                numTripPatterns: (numTripPatterns ?
+                                  numTripPatterns : this.tripQueryDefaults.numTripPatterns),
+                searchWindow: (searchWindow ?
+                               searchWindow : this.tripQueryDefaults.searchWindow)
             }
         };
     };

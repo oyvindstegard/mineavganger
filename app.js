@@ -16,6 +16,8 @@
 'use strict';
 
 /* Expected globals:
+   - El: tiny DOM element library
+   - $: jQuery
    - Entur: instance of Entur API functions
    - Storage: instance of Storage API
    - Bootstrap: Bootstrap object from bootstrap.js
@@ -26,7 +28,7 @@ const animDuration = 100; // general duration of any animated effect in UI, in m
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
 const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
 
-    const autocomplete = inputElement.autocomplete({
+    const autocomplete = $(inputElement).autocomplete({
         serviceUrl: Entur.getGeocoderAutocompleteApiUrl(),
         paramName: Entur.getGeocoderAutocompleteApiQueryParamName(),
         params: Entur.getGeocoderAutocompleteApiParams(transportMode),
@@ -112,9 +114,9 @@ const WindowSwipeDownFromTopHandler = function(callback) {
 
 
 /**
- * @returns a jQuery-wrapped heading element for the departure
+ * @returns an El-wrapped heading element for the departure.
  */
-function getDepartureHeading(departure) {
+function elDepartureHeading(departure) {
     let title = '';
     if (departure.placeFrom && departure.placeFrom.name) {
         title = 'fra ' + departure.placeFrom.name.replace(/,.*$/,'');
@@ -130,8 +132,8 @@ function getDepartureHeading(departure) {
     } else {
         title = Entur.transportModes[departure.mode].name(true) + ' ' + title;
     }
-    
-    return $('<h2/>', { class: 'departureHeading' }).text(title);
+
+    return El('h2.departureHeading').text(title);
 }
 
 /* Departure input form support. */
@@ -139,39 +141,32 @@ const DepartureInput = new (function() {
 
     const self = this;
 
-    const getNewDepartureForm = function(transportMode, addCallback) {
+    const elNewDepartureForm = function(transportMode, addCallback) {
         const modeDesc = Entur.transportModes[transportMode];
 
-        // Stop place from
-        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' })
-                  .text('Fra ' + modeDesc.place());
-        const placeFromInvalid = $('<span/>', {id:'placeFromInvalid', class:'invalid'})
-                  .text('Ikke funnet.').hide();
-        const placeFromInput = $('<input/>', {
-            id: 'placeFromInput',
+        const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
+        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet.').hide();
+        const placeFromInput = El('input#placeFromInput', {
             type: 'text',
-            title: 'Fra ' + modeDesc.place(),
-            placeholder: 'Fra ' + modeDesc.place()
-        }).focus(function (ev) {
-            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
+            title: `Fra ${modeDesc.place()}`,
+            placeholder: `Fra ${modeDesc.place()}`
+        }).event('focus', (ev) => {
+            ViewportUtils.ensureLowerVisibility(El.byId('departureSubmit').unwrap(), 500);
         });
 
-        // Stop place to
-        const placeToInputLabel = $('<label/>', { for: 'placeToInput' })
-                  .text('Til ' + modeDesc.place());
-        const placeToInvalid = $('<span/>', {id:'placeToInvalid', class:'invalid'})
-                  .text('Ikke funnet.').hide();
-        const placeToInput = $('<input/>', {
-            id: 'placeToInput',
+        const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
+        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet.').hide();
+        const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
-        }).focus(function (ev) {
-            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
+        }).event('focus', (ev) => {
+            ViewportUtils.ensureLowerVisibility(El.byId('departureSubmit').unwrap(), 500);
         });
 
+        // New departure dynamic heading
         const updateHeading = function() {
-            const heading = getDepartureHeading({
+            const headingElement = elDepartureHeading({
                 placeFrom: {
                     name: placeFromInput.data('stopPlace')
                 },
@@ -179,10 +174,12 @@ const DepartureInput = new (function() {
                     name: placeToInput.data('stopPlace')
                 },
                 mode: transportMode
-            }).attr('id', 'newDepartureHeading');
-            $('#newDepartureHeading').replaceWith(heading);
+            }).attr('id', 'newDepartureHeading').unwrap();
+            
+            El.byId('newDepartureHeading').unwrap().replaceWith(headingElement);
         };
 
+        // Input validation
         const validateInputs = function(ev) {
             let ok = true;
 
@@ -203,65 +200,70 @@ const DepartureInput = new (function() {
                 placeToInput.removeClass('invalid');
                 placeToInvalid.hide();
             }
+
+            // TODO validate that from/to is not the same stop place
             
             return ok;
         };
         
-        const fromAutocomplete = new GeocoderAutocomplete(placeFromInput, transportMode, Entur, function(s) {
-            // 'this' is bound to element on which event occurs
-            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
-            
-            $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateHeading();
+        const fromAutocomplete = new GeocoderAutocomplete(
+            placeFromInput.unwrap(), transportMode, Entur, function(s) {
+                // 'this' is bound to element on which event occurs
+                let valueIsChanged = (s.value !== this.dataset['stopPlace']);
+                
+                this.dataset['stopPlaceId'] = s.data;
+                this.dataset['stopPlace'] = s.value;
+                updateHeading();
 
-            if (placeFromInput.val() && valueIsChanged) {
-                placeToInput.focus();
-            }
-        }, function(e) {
-            $(this).data('stopPlaceId', null).data('stopPlace', null);
-        });
-        const toAutocomplete = new GeocoderAutocomplete(placeToInput, transportMode, Entur, function(s) {
-            // 'this' is bound to element on which event occurs
-            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
-            
-            $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateHeading();
-
-            if (placeToInput.val() && valueIsChanged) {
-                $('#departureSubmit').focus();
-            }
-        }, function() {
-            $(this).data('stopPlaceId', null).data('stopPlace', null);
-        });
+                if (placeFromInput.val() && valueIsChanged) {
+                    placeToInput.focus();
+                }
+            }, function(e) {
+                delete this.dataset['stopPlaceId'];
+                delete this.dataset['stopPlace'];
+            });
         
-        return $('<form/>', { 'id': 'newDepartureForm',
-                              'class': 'newDeparture',
-                              'autocomplete': 'off' }) // Disable native "history" auto-completion
-            .append(getDepartureHeading({
-                placeFrom: {},
-                placeTo: {},
-                mode: transportMode
-            }).attr('id', 'newDepartureHeading'))
-            .append($('<ul/>',{ class:'departureList' })
-                    .append($('<li/>').append(placeFromInput, placeFromInputLabel, placeFromInvalid),
-                            $('<li/>').append(placeToInput, placeToInputLabel, placeToInvalid)))
-            .append($('<button/>', {
-                text: 'Legg til',
-                id: 'departureSubmit',
-                type: 'submit',
-                click: validateInputs
-            }))
-            .append($('<button/>', {
-                type: 'button',
-                text: 'Avbryt',
-                click: function(ev) {
+        const toAutocomplete = new GeocoderAutocomplete(
+            placeToInput.unwrap(), transportMode, Entur, function(s) {
+                // 'this' is bound to element on which event occurs
+                let valueIsChanged = (s.value !== this.dataset['stopPlace']);
+                
+                this.dataset['stopPlaceId'] = s.data;
+                this.dataset['stopPlace'] = s.value;
+                updateHeading();
+
+                if (placeToInput.val() && valueIsChanged) {
+                    El.byId('departureSubmit').focus();
+                }
+            }, function() {
+                delete this.dataset['stopPlaceId'];
+                delete this.dataset['stopPlace'];
+            });
+
+
+        return El('form.newDeparture#newDepartureForm', {autocomplete: 'off'})
+            .append(
+                elDepartureHeading({
+                    placeFrom: {},
+                    placeTo: {},
+                    mode: transportMode
+                }).attr('id', 'newDepartureHeading'),
+
+                El('ul.departureList').append(
+                    El('li').append(placeFromInput, placeFromInputLabel, placeFromInvalid),
+                    El('li').append(placeToInput, placeToInputLabel, placeToInvalid)
+                ),
+
+                El('button#departureSubmit', {type: 'submit'}).text('Legg til').click(validateInputs),
+
+                El('button', {type: 'button'}).text('Avbryt').click((ev) => {
                     ev.preventDefault();
                     fromAutocomplete.dispose();
                     toAutocomplete.dispose();
-                    $('#newDepartureForm').replaceWith(self.getNewDepartureButtons(addCallback));
-                }
-            }))
-            .submit(function(ev) {
+                    El.byId('newDepartureForm').unwrap()
+                        .replaceWith(self.elNewDepartureButtons(addCallback).unwrap());
+                })
+            ).event('submit', (ev) => {
                 fromAutocomplete.dispose();
                 toAutocomplete.dispose();
                 addCallback({
@@ -278,22 +280,22 @@ const DepartureInput = new (function() {
                 return true;
             });
     };
-    
-    this.getNewDepartureButtons = function(addCallback) {
-        return $('<section/>', {id: 'newDepartureButtons'}).append(
-            $.map(Entur.transportModes,
-                  function (modeDesc, transportMode) {
-                      const buttonText = '+' + modeDesc.name(true);
-                      return $('<button/>', {class:'newDeparture'}).text(buttonText)
-                          .click(function(e) {
-                              e.preventDefault();
-                              $('#newDepartureButtons').replaceWith(
-                                  getNewDepartureForm(transportMode, addCallback));
-                              $('#placeFromInput').focus();
-                          });
-                  }));
+
+    this.elNewDepartureButtons = function(addCallback) {
+        return El('section#newDepartureButtons')
+            .append(
+                Object.entries(Entur.transportModes).map(([modeKey, mode]) => {
+                    const buttonText = '+' + mode.name(true);
+                    return El('button.newDeparture').text(buttonText)
+                        .click(function(ev) {
+                            ev.preventDefault();
+                            El.byId('newDepartureButtons').unwrap().replaceWith(
+                                elNewDepartureForm(modeKey, addCallback).unwrap()
+                            );
+                            El.byId('placeFromInput').focus();
+                        });
+                }));
     };
-    
 })();
 
 /* Dropdown menus support. */
@@ -503,7 +505,7 @@ function getDepartureSection(d) {
         .data('placeToName', d.placeTo.name)
         .data('mode', d.mode)
         .data('numTrips', d.numTrips || 3)
-        .append(getDepartureHeading(d))
+        .append(elDepartureHeading(d).unwrap())
         .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
             'Snu': function(ev) {
                 const reversed = reverseDepartureInStorage(d.id);
@@ -592,7 +594,7 @@ function updateDeparture(el) {
     const placeFrom = data.placeFromId;
     const placeTo = data.placeToId;
 
-    Entur.fetchJourneyPlannerResults(Entur.graphqlQuery(placeFrom, placeTo, mode, numTrips))
+    Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
         .then(function(result) {
             const listItems = $.map(result.data.trip.tripPatterns, function(trip, idx) {
                 return $('<li/>').append(getLineCodeElement(trip),
@@ -702,7 +704,7 @@ function renderApp() {
         updateDepartures(true);
     };
 
-    DepartureInput.getNewDepartureButtons(addCallback).appendTo(appContent);
+    DepartureInput.elNewDepartureButtons(addCallback).appendTo(appContent);
 }
 
 
@@ -721,5 +723,5 @@ function appInit() {
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "jQuery" "Storage" "Entur" "Bootstrap") */
+/* js2-additional-externs: ("$" "jQuery" "El" "Storage" "Entur" "Bootstrap") */
 /* End: */
