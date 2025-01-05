@@ -26,12 +26,12 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
             clearTimeout(delayTimer);
         }
         while (queue.length > 0 && inFlight < self.maxConcurrency) {
-            const dispatch = queue.shift();
+            const {func, resolve, reject} = queue.shift();
             ++inFlight;
-            dispatch.func()
-                .then(dispatch.deferred.resolve)
-                .catch(dispatch.deferred.reject)
-                .then(function() { --inFlight; });
+            func()
+                .then(resolve)
+                .catch(reject)
+                .finally(() => { --inFlight; });
         }
         delayTimer = queue.length > 0 ? setTimeout(processQueue, self.delayMillis) : null;
     };
@@ -39,10 +39,10 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
     /* Enqueues an async function execution, possibly delaying it if too many
        concurrent calls are in flight. Returns a promise. */
     this.enqueue = function(asyncFunc) {
-        const deferred = $.Deferred();
-        queue.push({func: asyncFunc, deferred: deferred});
-        processQueue();
-        return deferred.promise();
+        return new Promise((resolve, reject) => {
+            queue.push({func: asyncFunc, resolve, reject});
+            processQueue();
+        });
     };
 };
 
@@ -168,7 +168,7 @@ const Entur = new function() {
                              window.location.hostname.replace(/[.-]/g, '_') : 'unknown');
     };
 
-    const throttledDispatcher = new ThrottledDispatcher(1, 100);
+    const throttledDispatcher = new ThrottledDispatcher(1, 50);
 
     /* Post to JourneyPlanner API: GraphQL payload wrapped in JSON container.
        This function throttles number of concurrent requests to avoid request
@@ -176,49 +176,67 @@ const Entur = new function() {
        A single retry with backoff is also part of this function.
     */
     this.fetchJourneyPlannerResults = function(graphqlQuery) {
-        const request = function() {
-            return $.post({
-                url: journeyPlannerApi,
-                data: JSON.stringify(graphqlQuery),
-                dataType: 'json',
-                contentType: 'application/json',
-                headers: { 'ET-Client-Name': getEnturClientName() },
+        const requestFunc = () => {
+            const request = new Request(journeyPlannerApi, {
+                body: JSON.stringify(graphqlQuery),
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-type': 'application/json',
+                    'Accept': 'application/json',
+                    'ET-Client-Name': getEnturClientName()
+                }
+            });
+
+            return fetch(request).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+
+                return response.json();
             });
         };
-
-        return throttledDispatcher.enqueue(request)
+        
+        return throttledDispatcher.enqueue(requestFunc)
             .catch(function(err) {
-                console.log(`Warning: journey planner request failed: ${err}`);
+                console.error(`JourneyPlanner request failed: ${err}`);
                 // Back off 5 secs and retry once
-                return new Promise(function(resolve, reject) {
+                return new Promise((resolve, reject) => {
                     setTimeout(resolve, 5000);
-                }).then(function() {
-                    return throttledDispatcher.enqueue(request);
-                });
+                }).then(() => throttledDispatcher.enqueue(requestFunc));
             });
     };
 
-    /* Geocoder autocomplete for stops.
-       Results are simplified to only contain list of labels and stop ids
-    */
-    this.fetchGeocoderResults = function(text, successCallback, transportMode, countyIds) {
+    /*
+     * Fetch geocoder suggestions.
+     * Returns a Promise which resolves to a JSON object on success.
+     */
+    this.fetchGeocoderResults = async function(text, transportMode, abortSignal) {
+        const countyIds = defaultGeocoderCountyIds;
 
-        const params = self.getGeocoderAutocompleteApiParams(transportMode, countyIds);
-        params.text = text;
+        const url = new URL(geocoderAutocompleteApi);
+        url.searchParams.set('boundary.county_ids', countyIds.join(','));
+        url.searchParams.set('size', 20);
+        url.searchParams.set('layers', 'venue');
+        url.searchParams.set('categories', transportModeGeocoderCategories[transportMode].join(','));
+        url.searchParams.set('text', text);
         
-        return $.get({
-            url: geocoderAutocompleteApi,
-            data: params,
-            headers: self.getGeocoderAutocompleteApiHeaders(),
-            success: function(data) {
-                successCallback(data.features.map(function(feature) {
-                    return {
-                        'label': feature.properties.label,
-                        'stopPlaceId': feature.properties.id
-                    };
-                }));
+        const request = new Request(url, {
+            method: 'GET',
+            mode: 'cors',
+            signal: abortSignal,
+            headers: {
+                'Accept': 'application/json',
+                'ET-Client-Name': getEnturClientName()
             }
         });
+
+        const response = await fetch(request);
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+
+        return response.json();
     };
 
     this.getGeocoderAutocompleteApiUrl = function() {
@@ -245,6 +263,7 @@ const Entur = new function() {
     /* Returns required http-headers for geocoder API calls */
     this.getGeocoderAutocompleteApiHeaders = function() {
         return {
+            'Accept': 'application/json',
             'ET-Client-Name': getEnturClientName()
         };
     };
@@ -252,5 +271,5 @@ const Entur = new function() {
 };
 
 /* Local Variables: */
-/* js2-additional-externs: ("$") */
+/* js2-additional-externs: ("Request" "URL") */
 /* End: */

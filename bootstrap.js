@@ -1,5 +1,5 @@
 /*************************************************************************************
- * Boot strap: load js-deps in list order, register serviceworker and trigger app init
+ * Boot strap: load js-deps in list order, register serviceworker and trigger appInit
  *************************************************************************************
  */
 
@@ -53,31 +53,31 @@ Bootstrap.appUpdateAvailable = new Promise((resolve, reject) => {
     resolve(false);
 });
 
-Bootstrap.loadScriptDependencies = (onDependenciesLoaded) => {
-    const deps = Bootstrap.scriptDependencies;
-    const head = document.getElementsByTagName('head')[0];
+Bootstrap.loadScriptDependencies = () => {
+    return new Promise((resolve, reject) => {
+        const deps = Bootstrap.scriptDependencies;
+        const head = document.getElementsByTagName('head')[0];
 
-    const firstScript = document.createElement('script');
-    firstScript.src = Bootstrap.basePath + deps[0];
+        const firstScript = document.createElement('script');
+        firstScript.src = Bootstrap.basePath + deps[0];
 
-    let script = firstScript;
-    for (let i=1; i<deps.length; i++) {
-        const nextScript = document.createElement('script');
-        script.onload = function(ev) {
-            nextScript.src = Bootstrap.basePath + deps[i];
-            head.appendChild(nextScript);
-        };
-        script = nextScript;
-    }
-    script.onload = onDependenciesLoaded;
+        let script = firstScript;
+        for (let i=1; i<deps.length; i++) {
+            const nextScript = document.createElement('script');
+            script.onload = (ev) => {
+                nextScript.src = Bootstrap.basePath + deps[i];
+                head.appendChild(nextScript);
+            };
+            script = nextScript;
+        }
+        script.onload = () => resolve(true);
 
-    head.appendChild(firstScript);
+        head.appendChild(firstScript);        
+    });
 };
 
-Bootstrap.loadScriptDependencies(() => {
-    $(document).ready(appInit);
-});
+Bootstrap.loadScriptDependencies().then(() => appInit());
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "appInit" "URL") */
+/* js2-additional-externs: ("appInit" "URL") */
 /* End: */

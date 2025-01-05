@@ -148,6 +148,19 @@ El.ElWrapper.prototype.replaceWith = function(otherElement) {
     return this;
 };
 
+El.ElWrapper.prototype.replace = function(otherElement) {
+    if (otherElement instanceof El.ElWrapper) {
+        otherElement = otherElement.unwrap();
+    }
+    otherElement.replaceWith(this.element);
+    return this;
+};
+
+El.ElWrapper.prototype.remove = function() {
+    this.element.remove();
+    return this;
+};
+
 El.ElWrapper.prototype.appendTo = function(parentElement) {
     parentElement.append(this.element);
     return this;
@@ -315,14 +328,34 @@ El.byId = function(id) {
     return El.wrap(element);
 };
 
-El.one = function(selector) {
-    const element = document.querySelector(selector);
+El.one = function(selector, context) {
+    if (context instanceof El.ElWrapper) {
+        context = context.unwrap();
+    }
+    if (!context) {
+        context = document;
+    }
+    
+    const element = context.querySelector(selector);
     if (element === null) {
         return null;
     }
     return El.wrap(element);
 };
 
-El.each = function(selector, callback) {
-    document.querySelectorAll(selector).forEach((element) => callback(El.wrap(element)));
+El.each = function(selector, callback, context) {
+    if (context instanceof El.ElWrapper) {
+        context = context.unwrap();
+    }
+    if (!context) {
+        context = document;
+    }
+    context.querySelectorAll(selector).forEach((element) => callback(El.wrap(element)));
+};
+
+El.if = function(selector, callback, context) {
+    const el = El.one(selector, context);
+    if (el) {
+        callback(el);
+    }
 };

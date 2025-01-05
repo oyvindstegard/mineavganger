@@ -18,9 +18,9 @@
 /* Expected globals:
    - El: tiny DOM element library (replaces jQuery)
    - $: jQuery (deprecated, to be removed)
-   - Entur: instance of Entur API functions
-   - Storage: instance of Storage API
-   - Bootstrap: Bootstrap object from bootstrap.js
+   - Entur: the 'Entur' singleton object with Entur API methods.
+   - Storage: the 'Storage' singleton object of Storage API.
+   - Bootstrap: the 'Bootstrap' singleton object from bootstrap.js.
 */
 
 const defaultFadeTimeoutMilliseconds = 300;
@@ -63,14 +63,12 @@ const ViewportUtils = {
      * scroll if necessary. */
     ensureLowerVisibility: function(element, delay) {
         if (delay) {
-            setTimeout(function() {
-                ViewportUtils.ensureLowerVisibility(element);
-            }, delay);
+            setTimeout(() => ViewportUtils.ensureLowerVisibility(element), delay);
             return;
         }
-        
-        const viewportLower = $(window).scrollTop() + $(window).height();
-        const elementLower = $(element).offset().top + $(element).outerHeight();
+
+        const viewportLower = window.visualViewport.height + window.visualViewport.pageTop;
+        const elementLower = element.getBoundingClientRect().bottom;
         const pixelsBelow = elementLower - viewportLower;
         if (pixelsBelow > -10) {
             window.scrollBy(0, pixelsBelow + 10);
@@ -166,7 +164,7 @@ const DepartureInput = new (function() {
 
         // New departure dynamic heading
         const updateHeading = function() {
-            const headingElement = elDepartureHeading({
+            const headingEl = elDepartureHeading({
                 placeFrom: {
                     name: placeFromInput.data('stopPlace')
                 },
@@ -174,9 +172,9 @@ const DepartureInput = new (function() {
                     name: placeToInput.data('stopPlace')
                 },
                 mode: transportMode
-            }).attr('id', 'newDepartureHeading').unwrap();
+            }).attr('id', 'newDepartureHeading');
             
-            El.byId('newDepartureHeading').unwrap().replaceWith(headingElement);
+            El.byId('newDepartureHeading').replaceWith(headingEl);
         };
 
         // Input validation
@@ -260,8 +258,8 @@ const DepartureInput = new (function() {
                     ev.preventDefault();
                     fromAutocomplete.dispose();
                     toAutocomplete.dispose();
-                    El.byId('newDepartureForm').unwrap()
-                        .replaceWith(self.elNewDepartureButtons(addCallback).unwrap());
+                    El.byId('newDepartureForm')
+                        .replaceWith(self.elNewDepartureButtons(addCallback));
                 })
             ).event('submit', (ev) => {
                 fromAutocomplete.dispose();
@@ -379,37 +377,36 @@ Date.prototype.hhmm = function() {
     return hours + ':' + mins;
 };
 
-function getPlatformElement(trip) {
+function elPlatformElement(trip) {
     return (trip.legs[0].fromEstimatedCall.quay &&
             trip.legs[0].fromEstimatedCall.quay.publicCode) ?
-        $('<span/>', {
-            'class': 'platformCode',
-            'html': trip.legs[0].fromEstimatedCall.quay.publicCode,
+        El('span.platformCode', {
             'title': 'Plattform ' + trip.legs[0].fromEstimatedCall.quay.publicCode
-        })
+        }).html(trip.legs[0].fromEstimatedCall.quay.publicCode)
         :
-        $('<span/>');
+        El('span');
 }
-function getLineCodeElement(trip) {
+
+function elLineCodeElement(trip) {
     const name = trip.legs[0].fromEstimatedCall.destinationDisplay.frontText;
     const publicCode = trip.legs[0].line.publicCode;
     const bgcolor = trip.legs[0].line.presentation.colour || '888';
     const fgcolor = trip.legs[0].line.presentation.textColour || 'FFF';
 
-    return $('<span/>', {
-        'class': 'lineCode',
-        'html': publicCode
-    }).css({'color':'#'+fgcolor,'background-color':'#' + bgcolor}).prop('title', name);
+    return El('span.lineCode', {
+        title: name,
+        style: `color: #${fgcolor}; background-color: #${bgcolor};`
+    }).html(publicCode);
 }
-function getSituationSymbolElement(trip) {
+
+function elSituationSymbolElement(trip) {
     if (trip.legs[0].situations && trip.legs[0].situations.length) {
-        return $('<span/>', {
-            'html': '&#x26a0;&#xfe0f;'
-        });
+        return El('span').html('&#x26a0;&#xfe0f;');
     }
     return null;
 }
-function getTimeElements(trip, displayMinutesToStart) {
+
+function elTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
     const startTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.expectedDepartureTime);
     const aimedTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.aimedDepartureTime);
@@ -424,11 +421,10 @@ function getTimeElements(trip, displayMinutesToStart) {
         minutesToStart = 'over én time';
     }
 
-    return $('<span/>', {
-        'class': 'startTime',
-        'html': (minutesDelayed > 0 ? '<strike>'+aimedTime.hhmm()+'</strike><span class="startTimeDelayed">' + startTime.hhmm() + '</span>' : startTime.hhmm())
-            + (displayMinutesToStart ? ' (' + minutesToStart + ')' : '')
-    });
+    return El('span.startTime').html(
+        (minutesDelayed > 0 ?
+         `<strike>${aimedTime.hhmm()}</strike><span class="startTimeDelayed">${startTime.hhmm()}</span>` : startTime.hhmm())
+            + (displayMinutesToStart ? ` (${minutesToStart})` : ''));
 }
 
 /**
@@ -478,23 +474,18 @@ function collectSituations(tripPatterns) {
 }
 
 /**
- * Generate a list of situation items from list of situation objects as returned by
+ * Render a situation list item for a situation object as returned by
  * {@link collectSituations}.
  */
-function getSituationListItem(situation) {
-    return $('<li/>', { class: 'situation' })
-        .html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
-        .append($('<a/>', {href:'#'})
-                .text('Vis mer')
-                .click(function(ev) {
+function elSituationListItem(situation) {
+    return El('li.situation').html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
+        .append(El('a', {href: '#'})
+                .click(ev => {
                     ev.preventDefault();
-                    $(this).parent().replaceWith(
-                        $('<li/>', { class: 'situation__expanded' })
-                            .html('&#x26a0;&#xfe0f; ' + situation.description)
-                        
-                    );
-                })
-               );
+                    El('li.situation__expanded')
+                        .html('&#x26a0;&#xfe0f; ' + situation.description)
+                        .replace(ev.target.parentElement);
+                }));
 }
 
 function elDepartureSection(d) {
@@ -549,7 +540,7 @@ function elDepartureSection(d) {
                     ev.preventDefault();
                     Storage.removeDeparture(d.id);
                     El.byId('departure-' + d.id).fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
-                        el.unwrap().remove();
+                        el.remove();
                         if (El.one('section.departure') === null) {
                             El.byId('noDepartures').show();
                         }
@@ -558,17 +549,17 @@ function elDepartureSection(d) {
             }),
 
             El('ul.departureList'),
-            
             El('ul.situationList')
         );
 }
 
-function showDepartureLoader(element) {
-    const contentHeight = Math.max(32, element.offsetHeight) + 'px';
-    const loaderEl = El('ul.departureList', {style: 'height: ' + contentHeight}).append(
-                       El('li').append(
-                         El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V})));
-    element.replaceWith(loaderEl.unwrap());
+function departureListLoaderAnimation(departureListElement) {
+    const elementHeight = departureListElement.getBoundingClientRect().height;
+    const loaderHeight = Math.max(32, elementHeight);
+    El('ul.departureList', {style: `height: ${loaderHeight}px`}).append(
+        El('li').append(
+            El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V})))
+        .replace(departureListElement);
 }
 
 function spinOnce(element) {
@@ -584,9 +575,9 @@ function spinOnce(element) {
 function showMoreOrLess(element) {
     const el = El.wrap(element);
     if (!el.data('numTrips') || el.data('numTrips') == 3) {
-        updateDeparture(el.data('numTrips', 6).unwrap());
+        updateDepartureEl(el.data('numTrips', 6));
     } else {
-        updateDeparture(el.data('numTrips', 3).unwrap());
+        updateDepartureEl(el.data('numTrips', 3));
     }
     
     // Persist state
@@ -603,70 +594,72 @@ function reverseDepartureInStorage(departureId) {
     return Storage.saveDeparture(departure);
 }
 
-function updateDeparture(departureSectionElement) {
-    let el = departureSectionElement;
-    
-    if (! (el instanceof jQuery)) {
-        el = $(el);
-    }
-    if (el.data('loading')) {
+function updateDepartureEl(departureSectionEl) {
+    const el = departureSectionEl;
+
+    if (el.data('loading') === 'true') {
         return;
     } else {
-        el.data('loading', true);
+        el.data('loading', 'true');
     }
-    
-    showDepartureLoader($('ul.departureList', el).get(0));
 
-    // Query criteria are attached to DOM as data-attributes
-    const numTrips = el.data('numTrips') || 3;
+    departureListLoaderAnimation(El.one('ul.departureList', el).unwrap());
+
+    const numTrips = el.data('numTrips') ? parseInt(el.data('numTrips')) : 3;
     const mode = el.data('mode');
     const placeFrom = el.data('placeFromId');
+    const placeFromName = el.data('placeFromName');
     const placeTo = el.data('placeToId');
-
+    const placeToName = el.data('placeToName');
+    
     Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
-        .then(function(result) {
-            const listItems = $.map(result.data.trip.tripPatterns, function(trip, idx) {
-                return $('<li/>').append(getLineCodeElement(trip),
-                                         getTimeElements(trip, idx < 2),
-                                         getPlatformElement(trip),
-                                         getSituationSymbolElement(trip));
-            });
+        .then((result) => {
+            //throw new Error('Some mapping error occured');
             
-            if (!listItems.length) {
-                const modeDesc = Entur.transportModes[mode];
-                $('ul.departureList', el)
-                    .replaceWith($('<ul/>', { 'class': 'departureList' }).append(
-                        $('<li/>').text('Fant ingen avganger med '
-                                        + modeDesc.name()
-                                        + ' fra ' + el.data('placeFromName')
-                                        + ' til ' + el.data('placeToName'))
-                    ));
-                $('ul.situationList', el).remove();
-            } else {
-                const situationListItems =
-                      collectSituations(result.data.trip.tripPatterns).map(getSituationListItem);
+            const listItems = result.data.trip.tripPatterns.map((trip, idx) =>
+                El('li').append(
+                    elLineCodeElement(trip),
+                    elTimeElements(trip, idx < 2),
+                    elPlatformElement(trip),
+                    elSituationSymbolElement(trip)
+                ));
 
-                $('ul.departureList', el).replaceWith($('<ul/>', {class: 'departureList'}).append(listItems));
-                $('ul.situationList', el).replaceWith($('<ul/>', {class: 'situationList'}).append(situationListItems));
+            if (listItems.length) {
+                const situationListItems =
+                      collectSituations(result.data.trip.tripPatterns).map(elSituationListItem);
+                El('ul.departureList').append(listItems).replace(El.one('ul.departureList', el));
+                El('ul.situationList').append(situationListItems).replace(El.one('ul.situationList', el));
+            } else {
+                const modeDesc = Entur.transportModes[mode];
+                El.one('ul.departureList', el).replaceWith(
+                    El('ul.departureList').append(
+                        El('li').text(
+                            `Fant ingen avganger
+                             med ${modeDesc.name()} fra ${placeFromName} til ${placeToName}`
+                        )
+                    )
+                );
+                
+                El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
             }
-        }).catch(function(e) {
-            $('ul.departureList', el).replaceWith(
-                $('<ul/>', {class: 'departureList'})
-                    .append($('<li/>').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'))
-                    .append($('<li/>').html('<button>Forsøk på nytt</button>')
-                            .click(function(ev) {
-                                ev.preventDefault();
-                                updateDepartures(true);
-                            }))
-                    .append($('<li/>', {
-                        class:'technical',
-                        html: 'Feil: [' + data.placeFromId + '] &#x2192; [' +
-                            data.placeToId + ']: ' + e.statusText
-                    })));
-            $('ul.situationList', el).remove();
-        }).then(function() {
-            el.data('loading', false);
+        })
+        .catch((e) => {
+            El('ul.departureList').append(
+                El('li').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'),
+                El('li').append(
+                    El('button').text('Forsøk på nytt').click(ev => updateDepartures(true))
+                ),
+                El('li.technical').html(
+                    `Feil: [${placeFrom}] &#x2192; [${placeTo}]: ${e.message}`
+                )
+            ).replace(El.one('ul.departureList', el));
+
+            El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
+        })
+        .finally(() => {
+            el.data('loading', 'false');
         });
+
 }
 
 var lastUpdate = null;
@@ -682,7 +675,7 @@ function updateDepartures(userIntent) {
         || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
         spinOnce(El.byId('logospinner').unwrap());
 
-        El.each('main section.departure', (el) => updateDeparture(el.unwrap()));
+        El.each('main section.departure', updateDepartureEl);
 
         lastUpdate = new Date();
         El.byId('last-updated-info').text(lastUpdate.hhmm());
@@ -736,18 +729,19 @@ function renderApp() {
 }
 
 
-/* Application entry point, called after dependencies have been loaded and DOM
- * is ready. */
+/* Application entry point, called after script dependencies have been loaded. */
 function appInit() {
     renderApp();
-    updateDepartures();
-    $('header').click(function(ev) { updateDepartures(true); });
-    new WindowSwipeDownFromTopHandler(function() { updateDepartures(true); });
-    $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
 
-    Bootstrap.appUpdateAvailable.then(function() {
-        appUpdateAvailable = true;
-    });
+    updateDepartures();
+
+    El.one('header').click(() => updateDepartures(true));
+
+    new WindowSwipeDownFromTopHandler(() => updateDepartures(true));
+
+    El.wrap(window).event('focus', () => setTimeout(updateDepartures, 500));
+
+    Bootstrap.appUpdateAvailable.then(() => { appUpdateAvailable = true; });
 }
 
 /* Local Variables: */
