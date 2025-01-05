@@ -16,14 +16,14 @@
 'use strict';
 
 /* Expected globals:
-   - El: tiny DOM element library
-   - $: jQuery
+   - El: tiny DOM element library (replaces jQuery)
+   - $: jQuery (deprecated, to be removed)
    - Entur: instance of Entur API functions
    - Storage: instance of Storage API
    - Bootstrap: Bootstrap object from bootstrap.js
 */
 
-const animDuration = 100; // general duration of any animated effect in UI, in ms
+const defaultFadeTimeoutMilliseconds = 300;
 
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
 const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
@@ -145,7 +145,7 @@ const DepartureInput = new (function() {
         const modeDesc = Entur.transportModes[transportMode];
 
         const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
-        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet.').hide();
+        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet.');
         const placeFromInput = El('input#placeFromInput', {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
@@ -155,7 +155,7 @@ const DepartureInput = new (function() {
         });
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
-        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet.').hide();
+        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet.');
         const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
@@ -289,9 +289,8 @@ const DepartureInput = new (function() {
                     return El('button.newDeparture').text(buttonText)
                         .click(function(ev) {
                             ev.preventDefault();
-                            El.byId('newDepartureButtons').unwrap().replaceWith(
-                                elNewDepartureForm(modeKey, addCallback).unwrap()
-                            );
+                            El.byId('newDepartureButtons').replaceWith(
+                                elNewDepartureForm(modeKey, addCallback));
                             El.byId('placeFromInput').focus();
                         });
                 }));
@@ -305,63 +304,64 @@ const DropdownMenu = new (function() {
     const registerGlobalCloseDropdownsHandler = function () {
         if (globalCloseDropdownsHandlerRegistered) {
             return;
-        } else {
-            globalCloseDropdownsHandlerRegistered = true;
         }
-        $(window).click(function (ev) {
-            $('div.Dropdown__menu').each(function (idx, e) { $(e).fadeOut(animDuration); });
+
+        globalCloseDropdownsHandlerRegistered = true;
+
+        window.addEventListener('click', (ev) => {
+            El.each('div.Dropdown__menu', (el) => el.fadeOut());
         });
     };
 
     var idSequence = 0;
 
     /* Create a new dropdown menu with a button and custom actions. */
-    this.newDropdownMenu = function(title, actions) {
+    this.elDropdownMenu = function(title, actions) {
         registerGlobalCloseDropdownsHandler();
 
         const nextId = ++idSequence;
 
-        return $('<div/>', { class: 'Dropdown__container',
-                            id: 'Dropdown__container-' + nextId })
-            .append($('<button/>', { class: 'Dropdown__button',
-                                     id: 'Dropdown__button-' + nextId,
-                                     title: title })
-                    .append($('<img/>', { src: 'menu.svg?_V=' + Bootstrap.V,
-                                          width: '16',
-                                          height: '16',
-                                          alt: 'Meny-symbol' }))
-                    .click(function(ev) {
+        const menuId = 'Dropdown__menu-' + nextId;
+
+        return El('div.Dropdown__container#Dropdown__container-' + nextId)
+            .append(
+                El('button.Dropdown__button#Dropdown__button-' + nextId, { title })
+                    .append(
+                        El('img', {
+                            src: 'menu.svg?_V=' + Bootstrap.V,
+                            width: '16', height: '16',
+                            alt: 'Meny-symbol'
+                        }))
+                    .click((ev) => {
                         ev.preventDefault();
                         ev.stopPropagation();
-                        const thisMenuId = 'Dropdown__menu-' + nextId;
-                        $('.Dropdown__menu').each(function(idx, e) {
-                            if (e.id === thisMenuId) {
-                                if ($(e).is(':visible')) {
-                                    $(e).fadeOut(animDuration);
+                        El.each('.Dropdown__menu', (el) => {
+                            if (el.id() === menuId) {
+                                if (el.isVisible()) {
+                                    el.fadeOut();
                                 } else {
-                                    $(e).fadeIn(animDuration, function() {
-                                        ViewportUtils.ensureLowerVisibility(e);
+                                    el.fadeIn('block').then((el) => {
+                                        ViewportUtils.ensureLowerVisibility(el.unwrap());
                                     });
                                 }
                             } else {
-                                $(e).fadeOut(animDuration);
+                                el.fadeOut();
                             }
                         });
-                    })
-                   )
-            .append($('<div/>', {class: 'Dropdown__menu Dropdown__menuborder',
-                                 id: 'Dropdown__menu-' + nextId}
-                     ).append($.map(actions, function(val, key) {
-                         return $('<button/>', { class: 'Dropdown__item' })
-                             .html(key)
-                             .click(function(e) {
-                                 let element = this;
-                                 $('#Dropdown__menu-' + nextId).fadeOut(animDuration, function() {
-                                     val.call(element, e);
-                                 });
-                             });
-                    }))
-                   );
+                    }),
+
+                El('div.Dropdown__menu.Dropdown__menuborder#' + menuId)
+                    .append(
+                        Object.entries(actions).map(([htmlLabel, handler]) => 
+                            El('button.Dropdown__item')
+                                .html(htmlLabel)
+                                .click((ev) => {
+                                    El.byId(menuId).fadeOut()
+                                        .then((el) => handler.call(ev.target, ev));
+                                })
+                        )
+                    )
+            );
     };
 })();
 
@@ -407,6 +407,7 @@ function getSituationSymbolElement(trip) {
             'html': '&#x26a0;&#xfe0f;'
         });
     }
+    return null;
 }
 function getTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
@@ -496,8 +497,8 @@ function getSituationListItem(situation) {
                );
 }
 
-function getDepartureSection(d) {
-    return $('<section/>', {id: 'departure-' + d.id, class: 'departure'})
+function elDepartureSection(d) {
+    return El('section.departure#departure-' + d.id)
         .data('id', d.id)
         .data('placeFromId', d.placeFrom.stopId)
         .data('placeFromName', d.placeFrom.name)
@@ -505,65 +506,92 @@ function getDepartureSection(d) {
         .data('placeToName', d.placeTo.name)
         .data('mode', d.mode)
         .data('numTrips', d.numTrips || 3)
-        .append(elDepartureHeading(d).unwrap())
-        .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
-            'Snu': function(ev) {
-                const reversed = reverseDepartureInStorage(d.id);
-                $('#departure-' + d.id).replaceWith(getDepartureSection(reversed));
-                updateDeparture($('#departure-' + d.id));
-            },
-            '&#x2b; / &#x2212;': function(ev) {
-                showMoreOrLess($('#departure-' + d.id));
-            },
-            'Topp': function(ev) {
-                Storage.moveFirst(d.id);
-                $('#departure-' + d.id).detach().insertAfter($('#noDepartures'));
-                ViewportUtils.scrollToTop();
-            },
-            'Bunn': function(ev) {
-                Storage.moveLast(d.id);
-                const element = $('#departure-' + d.id)
-                                 .detach()
-                                 .insertBefore($('#newDepartureButtons'))[0];
-                ViewportUtils.ensureLowerVisibility(element);
-            },
-            'Slett': function(ev) {
-                ev.preventDefault();
-                Storage.removeDeparture(d.id);
-                $('#departure-' + d.id).remove();
-                if (!$('section.departure').length) {
-                    $('#noDepartures').show();
+        .append(
+            elDepartureHeading(d),
+            
+            DropdownMenu.elDropdownMenu('Meny for avgang', {
+                'Snu': function(ev) {
+                    const reversed = reverseDepartureInStorage(d.id);
+                    El.byId('departure-' + d.id).replaceWith(elDepartureSection(reversed));
+                    updateDeparture(El.byId('departure-' + d.id).unwrap());
+                },
+                '&#x2b; / &#x2212;': function(ev) {
+                    showMoreOrLess(El.byId('departure-' + d.id));
+                },
+                'Topp': function(ev) {
+                    const departureEl = El.byId('departure-' + d.id);
+                    if (departureEl.unwrap().previousElementSibling === El.byId('noDepartures').unwrap()) {
+                        return;
+                    }
+                    
+                    departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
+                        Storage.moveFirst(d.id);
+                        ViewportUtils.scrollToTop();
+                        El.byId('noDepartures').unwrap()
+                            .insertAdjacentElement('afterend', el.unwrap());
+                        return el;
+                    }).then((el) => el.fadeIn(null, defaultFadeTimeoutMilliseconds));
+                },
+                'Bunn': function(ev) {
+                    const departureEl = El.byId('departure-' + d.id);
+                    if (departureEl.unwrap().nextElementSibling === El.byId('newDepartureButtons').unwrap()) {
+                        return;
+                    }
+                    
+                    departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
+                        Storage.moveLast(d.id);
+                        el.unwrap().parentElement.insertBefore(
+                            el.unwrap(), El.byId('newDepartureButtons').unwrap());
+                        return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                    }).then((el) => ViewportUtils.ensureLowerVisibility(el.unwrap()));
+                },
+                'Slett': function(ev) {
+                    ev.preventDefault();
+                    Storage.removeDeparture(d.id);
+                    El.byId('departure-' + d.id).fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
+                        el.unwrap().remove();
+                        if (El.one('section.departure') === null) {
+                            El.byId('noDepartures').show();
+                        }
+                    });
                 }
-            }
-        }))
-        .append($('<ul/>', {class:'departureList'}),
-                $('<ul/>', {class:'situationList'}));
+            }),
+
+            El('ul.departureList'),
+            
+            El('ul.situationList')
+        );
 }
 
-function showDepartureLoader(el) {
-    const contentHeight = Math.max(32, $(el).height()) + 'px';
-    const loaderEl = $('<ul/>', {class:'departureList', height:contentHeight}).append(
-        $('<li/>').append($('<img/>', { src: 'logo.svg?_V=' + Bootstrap.V, class:'loader' })));
-    $(el).replaceWith(loaderEl);
+function showDepartureLoader(element) {
+    const contentHeight = Math.max(32, element.offsetHeight) + 'px';
+    const loaderEl = El('ul.departureList', {style: 'height: ' + contentHeight}).append(
+                       El('li').append(
+                         El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V})));
+    element.replaceWith(loaderEl.unwrap());
 }
 
-function spinOnce(el) {
-    $(el).replaceWith($(el).clone().addClass('spinonce'));
+function spinOnce(element) {
+    El.wrap(element)
+        .removeClass('spinonce')
+        .event('animationend', function handler(ev) {
+            ev.target.classList.remove('spinonce');
+            ev.target.removeEventListener('animationend', handler);
+        })
+        .addClass('spinonce');
 }
 
-// Expects a departure section element as argument
-function showMoreOrLess(el) {
-    if (! (el instanceof jQuery)) {
-        el = $(el);
-    }
-    if (!el.data('numTrips') || el.data('numTrips') === 3) {
-        updateDeparture(el.data('numTrips', 6));
+function showMoreOrLess(element) {
+    const el = El.wrap(element);
+    if (!el.data('numTrips') || el.data('numTrips') == 3) {
+        updateDeparture(el.data('numTrips', 6).unwrap());
     } else {
-        updateDeparture(el.data('numTrips', 3));
+        updateDeparture(el.data('numTrips', 3).unwrap());
     }
+    
     // Persist state
-    const d = Storage.getDeparture(el.data('id'));
-    d.numTrips = el.data('numTrips');
+    const d = Storage.getDeparture(parseInt(el.data('id')));
+    d.numTrips = parseInt(el.data('numTrips'));
     Storage.saveDeparture(d);
 }
 
@@ -575,7 +603,9 @@ function reverseDepartureInStorage(departureId) {
     return Storage.saveDeparture(departure);
 }
 
-function updateDeparture(el) {
+function updateDeparture(departureSectionElement) {
+    let el = departureSectionElement;
+    
     if (! (el instanceof jQuery)) {
         el = $(el);
     }
@@ -588,11 +618,10 @@ function updateDeparture(el) {
     showDepartureLoader($('ul.departureList', el).get(0));
 
     // Query criteria are attached to DOM as data-attributes
-    const data = el.data();
-    const numTrips = data.numTrips || 3;
-    const mode = data.mode;
-    const placeFrom = data.placeFromId;
-    const placeTo = data.placeToId;
+    const numTrips = el.data('numTrips') || 3;
+    const mode = el.data('mode');
+    const placeFrom = el.data('placeFromId');
+    const placeTo = el.data('placeToId');
 
     Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
         .then(function(result) {
@@ -609,8 +638,8 @@ function updateDeparture(el) {
                     .replaceWith($('<ul/>', { 'class': 'departureList' }).append(
                         $('<li/>').text('Fant ingen avganger med '
                                         + modeDesc.name()
-                                        + ' fra ' + data.placeFromName
-                                        + ' til ' + data.placeToName)
+                                        + ' fra ' + el.data('placeFromName')
+                                        + ' til ' + el.data('placeToName'))
                     ));
                 $('ul.situationList', el).remove();
             } else {
@@ -651,17 +680,15 @@ function updateDepartures(userIntent) {
 
     if (userIntent === true || lastUpdate === null
         || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
-        spinOnce($('#logospinner'));
+        spinOnce(El.byId('logospinner').unwrap());
 
-        $('main section.departure').each(function(idx, el) {
-            updateDeparture(el);
-        });
+        El.each('main section.departure', (el) => updateDeparture(el.unwrap()));
 
         lastUpdate = new Date();
-        $('#last-updated-info').text(lastUpdate.hhmm());
+        El.byId('last-updated-info').text(lastUpdate.hhmm());
 
         if (appUpdateAvailable) {
-            $('#appUpdate').show();
+            El.byId('appUpdate').show();
         }
     }
 
@@ -670,25 +697,24 @@ function updateDepartures(userIntent) {
 
 function renderApp() {
     const departures = Storage.getDepartures();
-    
-    const appContent = $('main').empty();
 
-    $('<section/>', {id:'appUpdate'}).append(
-        $('<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>')
-    ).appendTo(appContent);
+    const appContent = El('main');
 
-    $('<section/>', {id:'noDepartures'}).append(
-        $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å velge transporttype med knappene under.</p>')
-    ).appendTo(appContent);
+    El('section#appUpdate').append(El('p').html(
+        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>'
+    )).appendTo(appContent);
+
+    El('section#noDepartures').append(El('p').html(
+        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>'
+    )).appendTo(appContent);
+
     if (departures.length === 0) {
-        $('#noDepartures').show();
+        El.byId('noDepartures').show();
     }
 
-    departures.forEach(function (departure) {
-        getDepartureSection(departure).appendTo(appContent);
-    });
+    departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
 
-    const addCallback = function (newDep) {
+    const addCallback = (newDep) => {
         Storage.saveDeparture({
             placeFrom: {
                 stopId: newDep.placeFrom.stopId,
@@ -705,6 +731,8 @@ function renderApp() {
     };
 
     DepartureInput.elNewDepartureButtons(addCallback).appendTo(appContent);
+
+    El.one('main').replaceWith(appContent);
 }
 
 
@@ -712,7 +740,7 @@ function renderApp() {
  * is ready. */
 function appInit() {
     renderApp();
-    updateDepartures(); 
+    updateDepartures();
     $('header').click(function(ev) { updateDepartures(true); });
     new WindowSwipeDownFromTopHandler(function() { updateDepartures(true); });
     $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });

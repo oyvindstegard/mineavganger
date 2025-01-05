@@ -91,7 +91,7 @@ img.loader {
     filter: grayscale(100%);
     animation: spin 0.5s ease infinite;
 }
-img.spinonce {
+.spinonce {
     animation: spin 0.5s ease;
 }
 @keyframes spin {
@@ -260,7 +260,7 @@ input.invalid {
 }
 span.invalid {
     font-style: italic;
-    display: block;
+    display: none;
 }
 label {
     display: none;
