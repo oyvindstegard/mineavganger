@@ -63,3 +63,4 @@ løser problemet.
 - Animere endringer i avgangslisten.
 - Mulighet for eksportere avganger som URL som kan deles.
 - Sjekke om det finnes avganger før bruker trykker "legg til".
+- Opsjon for å automatisk sortere listen med avganger basert på geografisk avstand til stoppested.

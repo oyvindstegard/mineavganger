@@ -265,3 +265,29 @@ span.invalid {
 label {
     display: none;
 }
+
+/* new autocomplete */
+.suggestion-box {
+    position: absolute;
+    z-index: 1;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0;
+}
+.suggestion-list {
+    padding: 2px;
+}
+.suggestion-item {
+    padding: 5px 2px 5px;
+    border-bottom: 1px solid #ddd;
+    list-style-type: none;
+    cursor: pointer;
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+.suggestion-item.selected {
+    background-color: #e7f5ff;
+    color: #0069d9;
+}

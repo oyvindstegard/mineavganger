@@ -1,6 +1,6 @@
 /**********************************************************************************
  * Tiny El(ement) library for working with DOM elements.
- * Inspired by the API style of jQuery and is meant to replace it entirely.
+ * Inspired by the API style of jQuery and replaces it entirely for this app.
  **********************************************************************************
  */
 
@@ -66,6 +66,9 @@ El.parseNameClassId = function(nameClassId) {
 };
 
 El.ElWrapper = function(element) {
+    if (! (element instanceof Element)) {
+        throw new TypeError('Only Element types can be wrapped by El');
+    }
     this.element = element;
 };
 
@@ -77,6 +80,14 @@ El.ElWrapper.prototype.addClass = function(className) {
 El.ElWrapper.prototype.removeClass = function(className) {
     this.element.classList.remove(className);
     return this;
+};
+
+El.ElWrapper.prototype.css = function(cssProperty, value) {
+    if (value) {
+        this.element.style[cssProperty] = value;
+        return this;
+    }
+    return this.element.style[cssProperty];
 };
 
 El.ElWrapper.prototype.id = function(id) {
@@ -121,6 +132,13 @@ El.ElWrapper.prototype.text = function(textContent) {
 
 El.ElWrapper.prototype.html = function(htmlContent) {
     this.element.innerHTML = htmlContent;
+    return this;
+};
+
+El.ElWrapper.prototype.empty = function() {
+    while (this.element.firstChild) {
+        this.element.removeChild(this.element.lastChild);
+    }
     return this;
 };
 
@@ -214,11 +232,9 @@ El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
             if (animationDurationMilliseconds) {
                 this.element.style.removeProperty('animationDuration');
             }
-            this.element.removeEventListener('animationend', endListener);
             setTimeout(() => resolve(this), 1);
         };
-        
-        this.element.addEventListener('animationend', endListener);
+        this.element.addEventListener('animationend', endListener, { once: true });
 
         window.requestAnimationFrame(() => {
             if (animationDurationMilliseconds) {
@@ -243,10 +259,9 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
             if (animationDurationMilliseconds) {
                 this.element.style.removeProperty('animationDuration');
             }
-            this.element.removeEventListener('animationend', endListener);
             setTimeout(() => resolve(this), 1);
         };
-        this.element.addEventListener('animationend', endListener);
+        this.element.addEventListener('animationend', endListener, { once: true });
 
         window.requestAnimationFrame(() => {
             if (animationDurationMilliseconds) {
@@ -262,6 +277,10 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
 
 El.ElWrapper.prototype.isVisible = function() {
     return this.element.checkVisibility();
+};
+
+El.ElWrapper.prototype.isAttached = function() {
+    return this.element.parentElement !== null;
 };
 
 El.ElWrapper.prototype.unwrap = function() {
@@ -313,6 +332,9 @@ El.createStyleElement = function() {
 document.getElementsByTagName('head').item(0).append(El.createStyleElement());
 
 El.wrap = function(element) {
+    if (element === null) {
+        return null;
+    }
     if (element instanceof El.ElWrapper) {
         return element;
     }
@@ -356,6 +378,6 @@ El.each = function(selector, callback, context) {
 El.if = function(selector, callback, context) {
     const el = El.one(selector, context);
     if (el) {
-        callback(el);
+        return callback(el);
     }
 };

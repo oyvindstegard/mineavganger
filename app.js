@@ -15,7 +15,7 @@
 
 'use strict';
 
-/* Expected globals:
+/* Expected globals in browser runtime:
    - El: tiny DOM element library (replaces jQuery)
    - $: jQuery (deprecated, to be removed)
    - Entur: the 'Entur' singleton object with Entur API methods.
@@ -25,8 +25,187 @@
 
 const defaultFadeTimeoutMilliseconds = 300;
 
+const GeocoderAutocomplete = function(inputElement, transportMode, onSelect, onInvalidateSelected) {
+    inputElement = El.wrap(inputElement);
+    
+    let currentAbortController = null;
+    const fetchSuggestions = async (text) => {
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+
+        console.log('fetch for text: "' + text + '"');
+        
+        if (text.length < 2) {
+            return [];
+        }
+
+        currentAbortController = new AbortController();
+        try {
+            const geocoderJsonResponse = await Entur.fetchGeocoderResults(
+                text, transportMode, currentAbortController.signal);
+
+            if (! (Array.isArray(geocoderJsonResponse.features))) {
+                throw new Error('Unfamiliar response data from Geocoder API');
+            }
+
+            const suggestions = geocoderJsonResponse.features
+                  .filter(feature => feature.properties.label && feature.properties.id)
+                  .map(feature => {
+                      return {
+                          'label': feature.properties.label,
+                          'id': feature.properties.id
+                      };
+                  });
+
+            return suggestions;
+        } finally {
+            currentAbortController = null;
+        }
+    };
+
+    const debounce = (asyncFn, timeoutMillis) => {
+        let timeoutId;
+        return function(...args) {
+            return new Promise((resolve, reject) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    timeoutId = null;
+                    asyncFn.apply(this, args)
+                        .then(resolve)
+                        .catch(reject);
+                }, timeoutMillis);
+            });
+        };
+    };
+
+    const suggestionBox = El('div.suggestion-box').hide();
+
+    const maybeShowSuggestions = (text, suggestions) => {
+        if (!suggestionBox.isAttached()) {
+            // Lazily attach to DOM and initialize
+            inputElement.unwrap().after(suggestionBox.unwrap());
+            
+            suggestionBox.click(ev => {
+                const el = El.wrap(ev.target.closest('.suggestion-item'));
+                if (el && el.data('suggestionId') && el.data('suggestionLabel')) {
+                    onSelect.call(inputElement.unwrap(), el.data('suggestionId'), el.data('suggestionLabel'));
+                    inputElement.val(el.data('suggestionLabel'));
+                }
+            });
+        }
+        
+        if (! (text && suggestions)) {
+            suggestionBox.hide().empty();
+            return;
+        }
+
+        const suggestionList = El('ul.suggestion-list').data('selectedIndex', '0');
+
+        suggestions.forEach(suggestion => {
+            const listItem = El('li.suggestion-item')
+                      .data('suggestionId', suggestion.id)
+                      .data('suggestionLabel', suggestion.label);
+            const highlightedText = suggestion.label.replace(new RegExp(text, "gi"), "<b>$&</b>");
+            listItem.append(El('span.suggestion-text').html(highlightedText));
+
+            if (suggestionList.unwrap().children.length === 0) {
+                listItem.addClass('selected');
+            }
+
+            suggestionList.append(listItem);
+        });
+
+        const inputRect = inputElement.unwrap().getBoundingClientRect();
+        const boxWidth = inputRect.width - 2;
+        const boxTop = inputRect.top + inputRect.height + 1;
+        const boxLeft = inputRect.left;
+
+        suggestionBox.unwrap().replaceChildren(suggestionList.unwrap());
+        suggestionBox
+            .css('width', boxWidth + 'px')
+            .css('top', boxTop + 'px')
+            .css('left', boxLeft + 'px')
+            .show();
+    };
+
+    // Hmm, how do we know from this context when onInvalidateSelected
+    // Probably in conjunction with onChange event on input element
+    // Or just remember last selected item label and compare to current value
+    // mulig noen tips: https://www.w3schools.com/howto/howto_js_autocomplete.asp
+    
+    const hideSuggestionBoxEventListener = () => suggestionBox.hide();
+    
+    const debouncedFetch = debounce(fetchSuggestions, 300);
+    const inputListener = (ev) => {
+        const text = ev.target.value.trim();
+
+        console.log('input event with text: "' + text + '"');
+
+        debouncedFetch(text)
+            .then((suggestions) => maybeShowSuggestions(text, suggestions))
+            .catch(() => maybeShowSuggestions(null, []));
+    };
+
+    const keydownListener = (ev) => {
+        if (!suggestionBox.isVisible()) {
+            return;
+        }
+        if (ev.keyCode === 9) {
+            hideSuggestionBoxEventListener(ev);
+            return;
+        }
+        if (ev.keyCode === 38) {
+            const suggestionList = El.one('ul.suggestion-list', suggestionBox);
+            const selectedIndex = parseInt(suggestionList.data('selectedIndex'));
+            if (selectedIndex === suggestionList.children.length-1) {
+                return;
+            }
+            selectedIndex++;
+            
+        }
+        
+        switch (ev.keyCode) {
+        case 9:
+            hideSuggestionBoxEventListener(ev);
+            break;
+        case 38:
+            const El.one('ul.suggestion-list', suggestionBox);
+        case 40:
+        }
+    };
+
+    window.addEventListener('click', hideSuggestionBoxEventListener);
+    inputElement.event('input', inputListener)
+                .event('keydown', keydownListener);
+
+    this.dispose = function() {
+        inputElement.unwrap().removeEventListener('input', inputListener);
+        inputElement.unwrap().removeEventListener('keydown', keydownListener);
+        window.removeEventListener('click', hideSuggestionBoxEventListener);
+        
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+
+        if (suggestionBox) {
+            suggestionBox.remove();
+        }
+    };
+
+
+    this.doTest = function() {
+        const event = new InputEvent('input');
+        inputElement.val('li');
+        inputElement.unwrap().dispatchEvent(event);
+    };
+
+};
+
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
-const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
+const GeocoderAutocompleteJQ = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
 
     const autocomplete = $(inputElement).autocomplete({
         serviceUrl: Entur.getGeocoderAutocompleteApiUrl(),
@@ -205,12 +384,14 @@ const DepartureInput = new (function() {
         };
         
         const fromAutocomplete = new GeocoderAutocomplete(
-            placeFromInput.unwrap(), transportMode, Entur, function(s) {
+            placeFromInput, transportMode, function(id, label) {
                 // 'this' is bound to element on which event occurs
-                let valueIsChanged = (s.value !== this.dataset['stopPlace']);
+                let valueIsChanged = (id !== this.dataset['stopPlaceId']);
+
+                console.log('id=' + id);
                 
-                this.dataset['stopPlaceId'] = s.data;
-                this.dataset['stopPlace'] = s.value;
+                this.dataset['stopPlaceId'] = id;
+                this.dataset['stopPlace'] = label;
                 updateHeading();
 
                 if (placeFromInput.val() && valueIsChanged) {
@@ -220,8 +401,11 @@ const DepartureInput = new (function() {
                 delete this.dataset['stopPlaceId'];
                 delete this.dataset['stopPlace'];
             });
+
+        // XXX tmp debug
+        setTimeout(() => fromAutocomplete.doTest(), 250);
         
-        const toAutocomplete = new GeocoderAutocomplete(
+        const toAutocomplete = new GeocoderAutocompleteJQ(
             placeToInput.unwrap(), transportMode, Entur, function(s) {
                 // 'this' is bound to element on which event occurs
                 let valueIsChanged = (s.value !== this.dataset['stopPlace']);
@@ -306,9 +490,7 @@ const DropdownMenu = new (function() {
 
         globalCloseDropdownsHandlerRegistered = true;
 
-        window.addEventListener('click', (ev) => {
-            El.each('div.Dropdown__menu', (el) => el.fadeOut());
-        });
+        window.addEventListener('click', () => El.each('div.Dropdown__menu', el => el.fadeOut()));
     };
 
     var idSequence = 0;
@@ -332,7 +514,6 @@ const DropdownMenu = new (function() {
                         }))
                     .click((ev) => {
                         ev.preventDefault();
-                        ev.stopPropagation();
                         El.each('.Dropdown__menu', (el) => {
                             if (el.id() === menuId) {
                                 if (el.isVisible()) {
@@ -504,7 +685,7 @@ function elDepartureSection(d) {
                 'Snu': function(ev) {
                     const reversed = reverseDepartureInStorage(d.id);
                     El.byId('departure-' + d.id).replaceWith(elDepartureSection(reversed));
-                    updateDeparture(El.byId('departure-' + d.id).unwrap());
+                    updateDepartureEl(El.byId('departure-' + d.id));
                 },
                 '&#x2b; / &#x2212;': function(ev) {
                     showMoreOrLess(El.byId('departure-' + d.id));
@@ -525,14 +706,15 @@ function elDepartureSection(d) {
                 },
                 'Bunn': function(ev) {
                     const departureEl = El.byId('departure-' + d.id);
-                    if (departureEl.unwrap().nextElementSibling === El.byId('newDepartureButtons').unwrap()) {
+                    const bottomEl = El.one('#newDepartureForm, #newDepartureButtons');
+                    if (bottomEl == null
+                        || bottomEl.unwrap().previousElementSibling === departureEl.unwrap()) {
                         return;
                     }
                     
                     departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
                         Storage.moveLast(d.id);
-                        el.unwrap().parentElement.insertBefore(
-                            el.unwrap(), El.byId('newDepartureButtons').unwrap());
+                        el.unwrap().parentElement.insertBefore(el.unwrap(), bottomEl.unwrap());
                         return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
                     }).then((el) => ViewportUtils.ensureLowerVisibility(el.unwrap()));
                 },
@@ -614,8 +796,6 @@ function updateDepartureEl(departureSectionEl) {
     
     Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
         .then((result) => {
-            //throw new Error('Some mapping error occured');
-            
             const listItems = result.data.trip.tripPatterns.map((trip, idx) =>
                 El('li').append(
                     elLineCodeElement(trip),
@@ -659,7 +839,6 @@ function updateDepartureEl(departureSectionEl) {
         .finally(() => {
             el.data('loading', 'false');
         });
-
 }
 
 var lastUpdate = null;
@@ -739,11 +918,11 @@ function appInit() {
 
     new WindowSwipeDownFromTopHandler(() => updateDepartures(true));
 
-    El.wrap(window).event('focus', () => setTimeout(updateDepartures, 500));
+    window.addEventListener('focus', () => setTimeout(updateDepartures, 500));
 
     Bootstrap.appUpdateAvailable.then(() => { appUpdateAvailable = true; });
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "jQuery" "El" "Storage" "Entur" "Bootstrap") */
+/* js2-additional-externs: ("$" "jQuery" "AbortController" "El" "Storage" "Entur" "Bootstrap" "InputElement") */
 /* End: */

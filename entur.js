@@ -7,7 +7,7 @@
 'use strict';
 
 /* Generic throttled async function dispatch. Typical use case would be
-   to throttle AJAX requests. Function calls are processed in FIFO order.
+   to throttle fetch requests. Function calls are processed in FIFO order.
 
    maxConcurrency: max number of concurrently dispatched async operations.
    delayMillis: milliseconds to delay if concurrency is at max when new function
@@ -37,7 +37,7 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
     };
 
     /* Enqueues an async function execution, possibly delaying it if too many
-       concurrent calls are in flight. Returns a promise. */
+       concurrent calls are in flight. Returns a Promise. */
     this.enqueue = function(asyncFunc) {
         return new Promise((resolve, reject) => {
             queue.push({func: asyncFunc, resolve, reject});
