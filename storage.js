@@ -3,11 +3,19 @@
  **********************************************************************************
  Stores an ordered list of departure objects.
 
- Departure object shape:
+ Departure object required shape:
  {
-   id: <numeric auto generated if not present>,
-
-   <any>...
+   id: <number>,
+   placeFrom: {
+     stopId: <string>
+     name: <string>
+   },
+   placeTo: {
+     stopId: <string>
+     name: <string>
+   },
+   mode: <string>,
+   numTrips: <number?>
  }
  */
 
@@ -19,20 +27,68 @@ const Storage = new function() {
     const db = window.localStorage;
     const self = this;
     
-    const setDepartures = function(departures) {
+    const validateDeparture = d => {
+        if (typeof d !== 'object') throw new TypeError('departure must be an object');
+
+        if (typeof d.id !== 'number') {
+            throw new TypeError('id must be a number');
+        }
+
+        if (typeof d.placeFrom !== 'object') {
+            throw new TypeError('placeFrom not an object');
+        }
+        if (typeof d.placeFrom.stopId !== 'string' || typeof d.placeFrom.name !== 'string') {
+            throw new TypeError('invalid contents in placeFrom');
+        }
+
+        if (typeof d.placeTo !== 'object') {
+            throw new TypeError('placeTo not an object');
+        }
+        if (typeof d.placeTo.stopId !== 'string' || typeof d.placeTo.name !== 'string') {
+            throw new TypeError('invalid contents in placeTo');
+        }
+        
+        if (typeof d.mode !== 'string') {
+            throw new TypeError('mode is not a string');
+        }
+
+        if (d.numTrips && (typeof d.numTrips !== 'number' || d.numTrips < 1)) {
+            throw new TypeError('numTrips must be a positive number');
+        }
+
+        return d;
+    };
+
+    const setDeparturesLocalStorage = function(departures) {
         db.setItem('departures', JSON.stringify(departures));
         return departures;
     };
 
+    const getDeparturesLocalStorage = function() {
+        const jsonString = db.getItem('departures');
+        try {
+            return jsonString ? JSON.parse(jsonString) : [];
+        } catch (err) {
+            console.error(`Failed to load departures from local storage: ${err.message}, opening parachute`);
+            return [];
+        }
+    };
+
     /* Returns all stored departures as an array. */
     this.getDepartures = function() {
-        const list = db.getItem('departures');
-        return list ? JSON.parse(list) : [];
+        return getDeparturesLocalStorage().map(d => {
+            try {
+                return validateDeparture(d);
+            } catch (err) {
+                console.error(`Failed to validate a departure from storage: ${err.message}, removing it`);
+                return null;
+            }
+        }).filter(d => d !== null);
     };
 
     /* Returns a single departure by id */
     this.getDeparture = function(id) {
-        return self.getDepartures().find(function(d) { return d.id === id; });
+        return self.getDepartures().find(d => d.id === id);
     };
 
     /* Saves a departure. Assigns an 'id' property automatically to object, if not
@@ -45,21 +101,24 @@ const Storage = new function() {
             }).reduce(function(max, n) {
                 return n > max ? n : max;
             }, 0) + 1;
-        } 
+        }
+
+        validateDeparture(departure);
+        
         const updateIdx = list.findIndex(function(d) { return d.id === departure.id; });
         if (updateIdx > -1) {
             list[updateIdx] = departure;
         } else {
             list.push(departure);
         }
-        setDepartures(list);
+        setDeparturesLocalStorage(list);
         return departure;
     };
 
     /* Removes a departure by id, returns the removed departure. */
     this.removeDeparture = function(id) {
         var departureToRemove;
-        setDepartures(self.getDepartures().filter(function(d) {
+        setDeparturesLocalStorage(self.getDepartures().filter((d) => {
             if (id === d.id) {
                 departureToRemove = d;
                 return false;
@@ -80,7 +139,7 @@ const Storage = new function() {
             } else {
                 departures.push(departure);
             }
-            setDepartures(departures);
+            setDeparturesLocalStorage(departures);
             return departure;
         }
         return undefined;
@@ -99,6 +158,6 @@ const Storage = new function() {
     };
 
     this.removeAll = function() {
-        return setDepartures([]);
+        return setDeparturesLocalStorage([]);
     };
 };
