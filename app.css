@@ -253,7 +253,6 @@ input {
     padding: 0.5rem;
     width: 300px;
     border: 1px solid gray;
-    
 }
 input.invalid {
     border-color: #990000;
@@ -266,28 +265,35 @@ label {
     display: none;
 }
 
-/* new autocomplete */
-.suggestion-box {
+/* geocomplete.js */
+div.suggestion-box {
     position: absolute;
     z-index: 1;
     background-color: #fff;
     border: 1px solid #ddd;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    translate: 0 -0.75rem;
 }
-.suggestion-list {
-    padding: 2px;
+ul.suggestion-list {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
 }
-.suggestion-item {
+li.suggestion-item {
     padding: 5px 2px 5px;
     border-bottom: 1px solid #ddd;
-    list-style-type: none;
     cursor: pointer;
+    white-space: nowrap;
+    margin: 0;
 }
-.suggestion-item:last-child {
+li.suggestion-item:last-child {
     border-bottom: none;
 }
-.suggestion-item.selected {
+li.suggestion-item.selected {
     background-color: #e7f5ff;
     color: #0069d9;
 }

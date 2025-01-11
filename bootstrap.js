@@ -17,6 +17,7 @@ Bootstrap.scriptDependencies = ['jquery-3.7.1.min.js',
                                 'el.js',
                                 'storage.js',
                                 'entur.js',
+                                'geocomplete.js',
                                 'app.js']
     .map(scriptName => scriptName + '?_V=' + Bootstrap.V);
 
@@ -34,7 +35,14 @@ Bootstrap.appUpdateAvailable = new Promise((resolve, reject) => {
                         const installingWorker = reg.installing;
                         installingWorker.addEventListener('statechange', () => {
                             if (installingWorker.state === 'installed'
-                                && navigator.serviceWorker.controller) {
+                                && navigator.serviceWorker.controller)
+
+                                // TODO unsure about this, but prevent new app
+                                // message when mineavganger has never been run
+                                // on a device before (clean slate)
+                                // The redundant state might be more interesting.
+                                
+                            {
                                 resolve(true);
                             } else {
                                 resolve(false);

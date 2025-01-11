@@ -25,185 +25,6 @@
 
 const defaultFadeTimeoutMilliseconds = 300;
 
-const GeocoderAutocomplete = function(inputElement, transportMode, onSelect, onInvalidateSelected) {
-    inputElement = El.wrap(inputElement);
-    
-    let currentAbortController = null;
-    const fetchSuggestions = async (text) => {
-        if (currentAbortController) {
-            currentAbortController.abort();
-            currentAbortController = null;
-        }
-
-        console.log('fetch for text: "' + text + '"');
-        
-        if (text.length < 2) {
-            return [];
-        }
-
-        currentAbortController = new AbortController();
-        try {
-            const geocoderJsonResponse = await Entur.fetchGeocoderResults(
-                text, transportMode, currentAbortController.signal);
-
-            if (! (Array.isArray(geocoderJsonResponse.features))) {
-                throw new Error('Unfamiliar response data from Geocoder API');
-            }
-
-            const suggestions = geocoderJsonResponse.features
-                  .filter(feature => feature.properties.label && feature.properties.id)
-                  .map(feature => {
-                      return {
-                          'label': feature.properties.label,
-                          'id': feature.properties.id
-                      };
-                  });
-
-            return suggestions;
-        } finally {
-            currentAbortController = null;
-        }
-    };
-
-    const debounce = (asyncFn, timeoutMillis) => {
-        let timeoutId;
-        return function(...args) {
-            return new Promise((resolve, reject) => {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    timeoutId = null;
-                    asyncFn.apply(this, args)
-                        .then(resolve)
-                        .catch(reject);
-                }, timeoutMillis);
-            });
-        };
-    };
-
-    const suggestionBox = El('div.suggestion-box').hide();
-
-    const maybeShowSuggestions = (text, suggestions) => {
-        if (!suggestionBox.isAttached()) {
-            // Lazily attach to DOM and initialize
-            inputElement.unwrap().after(suggestionBox.unwrap());
-            
-            suggestionBox.click(ev => {
-                const el = El.wrap(ev.target.closest('.suggestion-item'));
-                if (el && el.data('suggestionId') && el.data('suggestionLabel')) {
-                    onSelect.call(inputElement.unwrap(), el.data('suggestionId'), el.data('suggestionLabel'));
-                    inputElement.val(el.data('suggestionLabel'));
-                }
-            });
-        }
-        
-        if (! (text && suggestions)) {
-            suggestionBox.hide().empty();
-            return;
-        }
-
-        const suggestionList = El('ul.suggestion-list').data('selectedIndex', '0');
-
-        suggestions.forEach(suggestion => {
-            const listItem = El('li.suggestion-item')
-                      .data('suggestionId', suggestion.id)
-                      .data('suggestionLabel', suggestion.label);
-            const highlightedText = suggestion.label.replace(new RegExp(text, "gi"), "<b>$&</b>");
-            listItem.append(El('span.suggestion-text').html(highlightedText));
-
-            if (suggestionList.unwrap().children.length === 0) {
-                listItem.addClass('selected');
-            }
-
-            suggestionList.append(listItem);
-        });
-
-        const inputRect = inputElement.unwrap().getBoundingClientRect();
-        const boxWidth = inputRect.width - 2;
-        const boxTop = inputRect.top + inputRect.height + 1;
-        const boxLeft = inputRect.left;
-
-        suggestionBox.unwrap().replaceChildren(suggestionList.unwrap());
-        suggestionBox
-            .css('width', boxWidth + 'px')
-            .css('top', boxTop + 'px')
-            .css('left', boxLeft + 'px')
-            .show();
-    };
-
-    // Hmm, how do we know from this context when onInvalidateSelected
-    // Probably in conjunction with onChange event on input element
-    // Or just remember last selected item label and compare to current value
-    // mulig noen tips: https://www.w3schools.com/howto/howto_js_autocomplete.asp
-    
-    const hideSuggestionBoxEventListener = () => suggestionBox.hide();
-    
-    const debouncedFetch = debounce(fetchSuggestions, 300);
-    const inputListener = (ev) => {
-        const text = ev.target.value.trim();
-
-        console.log('input event with text: "' + text + '"');
-
-        debouncedFetch(text)
-            .then((suggestions) => maybeShowSuggestions(text, suggestions))
-            .catch(() => maybeShowSuggestions(null, []));
-    };
-
-    const keydownListener = (ev) => {
-        if (!suggestionBox.isVisible()) {
-            return;
-        }
-        if (ev.keyCode === 9) {
-            hideSuggestionBoxEventListener(ev);
-            return;
-        }
-        if (ev.keyCode === 38) {
-            const suggestionList = El.one('ul.suggestion-list', suggestionBox);
-            const selectedIndex = parseInt(suggestionList.data('selectedIndex'));
-            if (selectedIndex === suggestionList.children.length-1) {
-                return;
-            }
-            selectedIndex++;
-            
-        }
-        
-        switch (ev.keyCode) {
-        case 9:
-            hideSuggestionBoxEventListener(ev);
-            break;
-        case 38:
-            const El.one('ul.suggestion-list', suggestionBox);
-        case 40:
-        }
-    };
-
-    window.addEventListener('click', hideSuggestionBoxEventListener);
-    inputElement.event('input', inputListener)
-                .event('keydown', keydownListener);
-
-    this.dispose = function() {
-        inputElement.unwrap().removeEventListener('input', inputListener);
-        inputElement.unwrap().removeEventListener('keydown', keydownListener);
-        window.removeEventListener('click', hideSuggestionBoxEventListener);
-        
-        if (currentAbortController) {
-            currentAbortController.abort();
-            currentAbortController = null;
-        }
-
-        if (suggestionBox) {
-            suggestionBox.remove();
-        }
-    };
-
-
-    this.doTest = function() {
-        const event = new InputEvent('input');
-        inputElement.val('li');
-        inputElement.unwrap().dispatchEvent(event);
-    };
-
-};
-
 /* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
 const GeocoderAutocompleteJQ = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
 
@@ -383,7 +204,7 @@ const DepartureInput = new (function() {
             return ok;
         };
         
-        const fromAutocomplete = new GeocoderAutocomplete(
+        const fromAutocomplete = new GeoComplete(
             placeFromInput, transportMode, function(id, label) {
                 // 'this' is bound to element on which event occurs
                 let valueIsChanged = (id !== this.dataset['stopPlaceId']);
@@ -401,9 +222,11 @@ const DepartureInput = new (function() {
                 delete this.dataset['stopPlaceId'];
                 delete this.dataset['stopPlace'];
             });
-
         // XXX tmp debug
-        setTimeout(() => fromAutocomplete.doTest(), 250);
+        setTimeout(() => {
+            placeFromInput.val('li');
+            placeFromInput.unwrap().dispatchEvent(new InputEvent('input'));
+        }, 250);
         
         const toAutocomplete = new GeocoderAutocompleteJQ(
             placeToInput.unwrap(), transportMode, Entur, function(s) {
@@ -436,16 +259,20 @@ const DepartureInput = new (function() {
                     El('li').append(placeToInput, placeToInputLabel, placeToInvalid)
                 ),
 
-                El('button#departureSubmit', {type: 'submit'}).text('Legg til').click(validateInputs),
+                El('button#departureSubmit', {type: 'submit'}).text('Legg til'),
 
-                El('button', {type: 'button'}).text('Avbryt').click((ev) => {
+                El('button', {type: 'button'}).text('Avbryt').click(ev => {
                     ev.preventDefault();
                     fromAutocomplete.dispose();
                     toAutocomplete.dispose();
                     El.byId('newDepartureForm')
                         .replaceWith(self.elNewDepartureButtons(addCallback));
                 })
-            ).event('submit', (ev) => {
+            ).event('submit', ev => {
+                if (!validateInputs()) {
+                    ev.preventDefault();
+                    return;
+                }
                 fromAutocomplete.dispose();
                 toAutocomplete.dispose();
                 addCallback({
@@ -459,7 +286,6 @@ const DepartureInput = new (function() {
                     },
                     mode: transportMode
                 });
-                return true;
             });
     };
 
@@ -747,10 +573,7 @@ function departureListLoaderAnimation(departureListElement) {
 function spinOnce(element) {
     El.wrap(element)
         .removeClass('spinonce')
-        .event('animationend', function handler(ev) {
-            ev.target.classList.remove('spinonce');
-            ev.target.removeEventListener('animationend', handler);
-        })
+        .event('animationend', ev => ev.target.classList.remove('spinonce'), {once: true})
         .addClass('spinonce');
 }
 
@@ -862,6 +685,9 @@ function updateDepartures(userIntent) {
         if (appUpdateAvailable) {
             El.byId('appUpdate').show();
         }
+        if (!El.one('main section.departure')) {
+            El.byId('noDepartures').show();
+        }
     }
 
     updateTimeout = setTimeout(updateDepartures, 60000);
@@ -877,12 +703,8 @@ function renderApp() {
     )).appendTo(appContent);
 
     El('section#noDepartures').append(El('p').html(
-        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>'
+        '<p>Ingen avganger er lagret.</p><p>Legg til nye ved å velge transportmiddel med knappene under.</p>'
     )).appendTo(appContent);
-
-    if (departures.length === 0) {
-        El.byId('noDepartures').show();
-    }
 
     departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
 
@@ -924,5 +746,5 @@ function appInit() {
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "jQuery" "AbortController" "El" "Storage" "Entur" "Bootstrap" "InputElement") */
+/* js2-additional-externs: ("El" "Storage" "Entur" "Bootstrap" "InputElement" "GeoComplete") */
 /* End: */

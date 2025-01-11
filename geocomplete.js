@@ -1,0 +1,212 @@
+/**********************************************************************************
+ * Autocomplete widget for Geocoder API
+ **********************************************************************************
+ * Requires:
+ * - el.js
+ * - entur.js
+ */
+
+'use strict';
+
+const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidateSelected) {
+    inputElement = El.wrap(inputElement);
+    
+    let currentAbortController = null;
+    const fetchSuggestions = async function (text) {
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+
+        console.log('fetch for text: "' + text + '"');
+        
+        if (text.length < 2) {
+            return [];
+        }
+
+        currentAbortController = new AbortController();
+        try {
+            const geocoderJsonResponse = await Entur.fetchGeocoderResults(
+                text, transportMode, currentAbortController.signal);
+
+            if (! (Array.isArray(geocoderJsonResponse.features))) {
+                throw new Error('Unfamiliar response data from Geocoder API');
+            }
+
+            const suggestions = geocoderJsonResponse.features
+                  .filter(feature => feature.properties.label && feature.properties.id)
+                  .map(feature => {
+                      return {
+                          'label': feature.properties.label,
+                          'id': feature.properties.id
+                      };
+                  });
+
+            return suggestions;
+        } finally {
+            currentAbortController = null;
+        }
+    };
+
+    const debounce = (asyncFn, timeoutMillis) => {
+        let timeoutId;
+        return function(...args) {
+            return new Promise((resolve, reject) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    timeoutId = null;
+                    asyncFn.apply(this, args)
+                        .then(resolve)
+                        .catch(reject);
+                }, timeoutMillis);
+            });
+        };
+    };
+
+    const suggestionBox = El('div.suggestion-box').hide();
+
+    const selectSuggestion = (suggestionId, suggestionLabel) => {
+        onSelect.call(inputElement.unwrap(), suggestionId, suggestionLabel);
+        inputElement.val(suggestionLabel);
+    };
+
+    const maybeShowSuggestions = (text, suggestions) => {
+        if (!suggestionBox.isAttached()) {
+            // Lazily attach to DOM and initialize
+            inputElement.unwrap().after(suggestionBox.unwrap());
+            
+            suggestionBox.click(ev => {
+                const el = El.wrap(ev.target.closest('.suggestion-item'));
+                if (el && el.data('suggestionId') && el.data('suggestionLabel')) {
+                    selectSuggestion(el.data('suggestionId'), el.data('suggestionLabel'));
+                }
+            });
+        }
+        
+        if (! (text && suggestions && suggestions.length)) {
+            suggestionBox.hide().empty();
+            return;
+        }
+        if (document.activeElement !== inputElement.unwrap()) {
+            suggestionBox.hide().empty();
+            return;
+        }
+
+        const suggestionList = El('ul.suggestion-list');
+
+        suggestions.forEach(suggestion => {
+            const listItem = El('li.suggestion-item')
+                      .data('suggestionId', suggestion.id)
+                      .data('suggestionLabel', suggestion.label);
+            const highlightedText = suggestion.label.replace(new RegExp(text, "gi"), "<b>$&</b>");
+            listItem.append(El('span.suggestion-text').html(highlightedText));
+
+            if (suggestionList.unwrap().children.length === 0) {
+                listItem.addClass('selected');
+            }
+
+            suggestionList.append(listItem);
+        });
+
+        const boxWidth = inputElement.unwrap().getBoundingClientRect().width - 1;
+
+        suggestionBox.unwrap().replaceChildren(suggestionList.unwrap());
+        suggestionBox
+            .css('width', boxWidth + 'px')
+            .show();
+    };
+
+    // Hmm, how do we know from this context when onInvalidateSelected
+    // Probably in conjunction with onChange event on input element
+    // Or just remember last selected item label and compare to current value
+    // mulig noen tips: https://www.w3schools.com/howto/howto_js_autocomplete.asp
+    
+    const hideSuggestionBoxEventListener = () => suggestionBox.hide();
+    
+    const debouncedFetch = debounce(fetchSuggestions, 300);
+    const inputListener = (ev) => {
+        const text = ev.target.value.trim();
+
+        console.log('input event with text: "' + text + '"');
+
+        debouncedFetch(text)
+            .then((suggestions) => maybeShowSuggestions(text, suggestions))
+            .catch(() => maybeShowSuggestions(null, []));
+    };
+
+    const keydownListener = (ev) => {
+        if (!suggestionBox.isVisible()) {
+            return;
+        }
+        if (ev.keyCode === 9) {
+            suggestionBox.hide();
+            return;
+        }
+        if (ev.keyCode === 38 || ev.keyCode === 40) {
+            El.if('li.suggestion-item.selected', function() {
+                let elementToSelect = null;
+                if (ev.keyCode === 38 && this.previousElementSibling) {
+                    elementToSelect = this.previousElementSibling;
+                } else if (ev.keyCode === 40 && this.nextElementSibling) {
+                    elementToSelect = this.nextElementSibling;
+                }
+                if (elementToSelect) {
+                    this.classList.remove('selected');
+                    elementToSelect.classList.add('selected');
+                    window.requestAnimationFrame(() => {
+                        elementToSelect.scrollIntoView({block: 'nearest'});
+                    });
+                }
+            }, suggestionBox);
+            return;
+        }
+        if (ev.keyCode === 13) {
+            ev.preventDefault();
+
+            El.if('li.suggestion-item.selected', el => {
+                selectSuggestion(el.data('suggestionId'), el.data('suggestionLabel'));
+            }, suggestionBox);
+            
+            suggestionBox.hide();
+            return;
+        }
+        if (ev.keyCode === 27) {
+            suggestionBox.hide();
+            return;
+        }
+    };
+
+    const mouseListener = ev => {
+        
+    };
+
+    window.addEventListener('click', hideSuggestionBoxEventListener);
+    inputElement
+        .event('input', inputListener)
+        .event('keydown', keydownListener)
+        .event('mouseover', mouseListener);
+
+
+    this.dispose = function() {
+        inputElement.do(function() {
+            this.removeEventListener('input', inputListener);
+            this.removeEventListener('keydown', keydownListener);
+            this.removeEventListener('mouseover', mouseListener);
+        });
+        window.removeEventListener('click', hideSuggestionBoxEventListener);
+        
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+
+        if (suggestionBox) {
+            suggestionBox.remove();
+        }
+    };
+
+};
+
+/* Local Variables: */
+/* js2-additional-externs: ("El" "Entur" "AbortController") */
+/* End: */

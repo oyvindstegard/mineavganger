@@ -72,6 +72,10 @@ El.ElWrapper = function(element) {
     this.element = element;
 };
 
+El.ElWrapper.prototype.hasClass = function(className) {
+    return this.element.classList.contains(className);
+};
+
 El.ElWrapper.prototype.addClass = function(className) {
     this.element.classList.add(className);
     return this;
@@ -184,8 +188,8 @@ El.ElWrapper.prototype.appendTo = function(parentElement) {
     return this;
 };
 
-El.ElWrapper.prototype.event = function(eventName, handler) {
-    this.element.addEventListener(eventName, handler);
+El.ElWrapper.prototype.event = function(eventName, handler, options) {
+    this.element.addEventListener(eventName, handler, options);
     return this;
 };
 
@@ -287,6 +291,11 @@ El.ElWrapper.prototype.unwrap = function() {
     return this.element;
 };
 
+El.ElWrapper.prototype.do = function(callback, ...args) {
+    return callback.apply(this.element, this.element, ...args);
+};
+
+
 El.ElWrapper.prototype.toString = function() {
     return `[object El.ElWrapper ${this.element}]`;
 };
@@ -372,12 +381,13 @@ El.each = function(selector, callback, context) {
     if (!context) {
         context = document;
     }
-    context.querySelectorAll(selector).forEach((element) => callback(El.wrap(element)));
+    context.querySelectorAll(selector).forEach(
+        (element, idx) => callback.call(element, El.wrap(element), idx));
 };
 
 El.if = function(selector, callback, context) {
     const el = El.one(selector, context);
     if (el) {
-        return callback(el);
+        return callback.call(el.unwrap(), el);
     }
 };
