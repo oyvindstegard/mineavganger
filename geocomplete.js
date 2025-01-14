@@ -18,8 +18,6 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             currentAbortController = null;
         }
 
-        console.log('fetch for text: "' + text + '"');
-        
         if (text.length < 2) {
             return [];
         }
@@ -127,10 +125,6 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             const highlightedText = suggestion.label.replace(new RegExp(text, "gi"), "<b>$&</b>");
             listItem.append(El('span.suggestion-text').html(highlightedText));
 
-            if (suggestionList.unwrap().children.length === 0) {
-                listItem.addClass('selected');
-            }
-
             suggestionList.append(listItem);
         });
 
@@ -174,21 +168,33 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             return;
         }
         if (ev.keyCode === 38 || ev.keyCode === 40) {
-            El.if('li.suggestion-item.selected', function() {
+            ev.preventDefault();
+            const selected = El.one('li.suggestion-item.selected', suggestionBox);
+            if (selected) {
+                const selectedElement = selected.unwrap();
                 let elementToSelect = null;
-                if (ev.keyCode === 38 && this.previousElementSibling) {
-                    elementToSelect = this.previousElementSibling;
-                } else if (ev.keyCode === 40 && this.nextElementSibling) {
-                    elementToSelect = this.nextElementSibling;
+                if (ev.keyCode === 38 && selectedElement.previousElementSibling) {
+                    elementToSelect = selectedElement.previousElementSibling;
+                } else if (ev.keyCode === 40 && selectedElement.nextElementSibling) {
+                    elementToSelect = selectedElement.nextElementSibling;
                 }
                 if (elementToSelect) {
-                    this.classList.remove('selected');
+                    selectedElement.classList.remove('selected');
                     elementToSelect.classList.add('selected');
                     window.requestAnimationFrame(() => {
                         elementToSelect.scrollIntoView({block: 'nearest'});
                     });
                 }
-            }, suggestionBox);
+            } else {
+                if (ev.keyCode === 38) return;
+
+                El.if('li.suggestion-item', function(el) {
+                    el.addClass('selected');
+                    window.requestAnimationFrame(() => {
+                        this.scrollIntoView({block: 'nearest'});
+                    });
+                }, suggestionBox);
+            }
             return;
         }
         if (ev.keyCode === 13) {
