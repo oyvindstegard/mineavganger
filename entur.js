@@ -239,35 +239,6 @@ const Entur = new function() {
         return response.json();
     };
 
-    this.getGeocoderAutocompleteApiUrl = function() {
-        return geocoderAutocompleteApi;
-    };
-
-    this.getGeocoderAutocompleteApiQueryParamName = function() {
-        return 'text';
-    };
-
-    /* Returns object with jQuery AJAX settings for a geocoder request */
-    this.getGeocoderAutocompleteApiParams = function(transportMode, countyIds) {
-        if (!countyIds) {
-            countyIds = defaultGeocoderCountyIds;
-        }
-        return {
-            'boundary.county_ids': countyIds.join(','),
-            'size': 20,
-            'layers': 'venue',
-            'categories': transportModeGeocoderCategories[transportMode].join(',')
-        };
-    };
-
-    /* Returns required http-headers for geocoder API calls */
-    this.getGeocoderAutocompleteApiHeaders = function() {
-        return {
-            'Accept': 'application/json',
-            'ET-Client-Name': getEnturClientName()
-        };
-    };
-    
 };
 
 /* Local Variables: */
