@@ -210,11 +210,7 @@ El.ElWrapper.prototype.show = function(cssDisplayShowValue) {
 };
 
 El.ElWrapper.prototype.hide = function() {
-    this.element.style.removeProperty('display');
-    if (this.isVisible() || this.element.parentElement === null) {
-        // Computed style likely makes element displayed by default, or element not attached to DOM yet.
-        this.element.style.display = 'none';
-    }
+    this.element.style.display = 'none';
     return this;
 };
 
@@ -226,16 +222,17 @@ El.ElWrapper.prototype.focus = function() {
 El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
     return new Promise((resolve) => {
         if (!this.isVisible()) {
-            resolve(self);
+            resolve(this);
             return;
         }
 
-        const endListener = (ev) => {
+        const endListener = ev => {
             this.hide();
             this.element.classList.remove('el-fadeout', 'el-fadein');
             if (animationDurationMilliseconds) {
                 this.element.style.removeProperty('animationDuration');
             }
+            
             setTimeout(() => resolve(this), 1);
         };
         this.element.addEventListener('animationend', endListener, { once: true });
@@ -291,10 +288,9 @@ El.ElWrapper.prototype.unwrap = function() {
     return this.element;
 };
 
-El.ElWrapper.prototype.do = function(callback, ...args) {
+El.ElWrapper.prototype.with = function(callback, ...args) {
     return callback.apply(this.element, this.element, ...args);
 };
-
 
 El.ElWrapper.prototype.toString = function() {
     return `[object El.ElWrapper ${this.element}]`;
@@ -352,11 +348,7 @@ El.wrap = function(element) {
 };
 
 El.byId = function(id) {
-    const element = document.getElementById(id);
-    if (element === null) {
-        return null;
-    }
-    return El.wrap(element);
+    return El.wrap(document.getElementById(id));
 };
 
 El.one = function(selector, context) {
@@ -367,11 +359,7 @@ El.one = function(selector, context) {
         context = document;
     }
     
-    const element = context.querySelector(selector);
-    if (element === null) {
-        return null;
-    }
-    return El.wrap(element);
+    return El.wrap(context.querySelector(selector));
 };
 
 El.each = function(selector, callback, context) {
@@ -385,9 +373,14 @@ El.each = function(selector, callback, context) {
         (element, idx) => callback.call(element, El.wrap(element), idx));
 };
 
-El.if = function(selector, callback, context) {
-    const el = El.one(selector, context);
-    if (el) {
-        return callback.call(el.unwrap(), el);
+El.if = function(selectorOrElement, callback, context) {
+    if (selectorOrElement instanceof Element) {
+        return callback.call(selectorOrElement, El.wrap(selectorOrElement));
+    } else if (typeof selectorOrElement === 'string') {
+        const el = El.one(selectorOrElement, context);
+        if (el) {
+            return callback.call(el.unwrap(), el);
+        }
     }
+    return undefined;
 };

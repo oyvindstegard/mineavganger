@@ -1,15 +1,10 @@
 /**********************************************************************************
  * JavaScript/HTML 5 web app for personalized display of departures using Entur
- * JourneyPlanner API. The code currently relies on jQuery. It also uses some
- * raw ES6 features, which limits browser support to modern stuff.
+ * JourneyPlanner API. The code uses ES6 features, which limits browser support
+ * to modern stuff.
  * 
  * Author: Øyvind Stegard <oyvind@stegard.net>
  * License: GPL-3
- *
- * Code uses the following libraries, which are all MIT-licensed:
- * - jQuery, https://jquery.com/
- * - Ajax AutoComplete for jQuery,
- *   https://github.com/devbridge/jQuery-Autocomplete
  **********************************************************************************
  */
 
@@ -17,7 +12,6 @@
 
 /* Expected globals in browser runtime:
    - El: tiny DOM element library (replaces jQuery)
-   - $: jQuery (deprecated, to be removed)
    - Entur: the 'Entur' singleton object with Entur API methods.
    - Storage: the 'Storage' singleton object of Storage API.
    - Bootstrap: the 'Bootstrap' singleton object from bootstrap.js.
@@ -25,40 +19,9 @@
 
 const defaultFadeTimeoutMilliseconds = 300;
 
-/* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
-const GeocoderAutocompleteJQ = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
-
-    const autocomplete = $(inputElement).autocomplete({
-        serviceUrl: Entur.getGeocoderAutocompleteApiUrl(),
-        paramName: Entur.getGeocoderAutocompleteApiQueryParamName(),
-        params: Entur.getGeocoderAutocompleteApiParams(transportMode),
-        ajaxSettings: {
-            dataType: 'json',
-            headers: Entur.getGeocoderAutocompleteApiHeaders()
-        },
-        onSelect: onSelect,
-        onInvalidateSelection: onInvalidate,
-        minChars: 2,
-        transformResult: function(response, originalQuery) {
-            const suggestions = response.features.map(function(feature) {
-                return {
-                    'value': feature.properties.label,
-                    'data': feature.properties.id
-                };
-            });
-            return {
-                suggestions: suggestions
-            };
-        }
-    }).autocomplete();
-
-    this.dispose = function() {
-        autocomplete.dispose();
-    };
-    
-};
-
 const ViewportUtils = {
+    // TODO switch to intersection observer API
+
     /* Ensure that bottom of an element is completely visible in viewport,
      * scroll if necessary. */
     ensureLowerVisibility: function(element, delay) {
@@ -205,7 +168,8 @@ const DepartureInput = new (function() {
         };
         
         const fromAutocomplete = new GeoComplete(
-            placeFromInput, transportMode, function(id, label) {
+            placeFromInput, transportMode,
+            function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
                 let valueIsChanged = (id !== this.dataset['stopPlaceId']);
 
@@ -218,29 +182,27 @@ const DepartureInput = new (function() {
                 if (placeFromInput.val() && valueIsChanged) {
                     placeToInput.focus();
                 }
-            }, function(e) {
+            },
+            function onInvalidate() {
+                console.log('invalidated selected input');
                 delete this.dataset['stopPlaceId'];
                 delete this.dataset['stopPlace'];
             });
-        // XXX tmp debug
-        setTimeout(() => {
-            placeFromInput.val('li');
-            placeFromInput.unwrap().dispatchEvent(new InputEvent('input'));
-        }, 250);
         
-        const toAutocomplete = new GeocoderAutocompleteJQ(
-            placeToInput.unwrap(), transportMode, Entur, function(s) {
+        const toAutocomplete = new GeoComplete(
+            placeToInput.unwrap(), transportMode,
+            function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
-                let valueIsChanged = (s.value !== this.dataset['stopPlace']);
+                let valueIsChanged = (id.value !== this.dataset['stopPlaceId']);
                 
-                this.dataset['stopPlaceId'] = s.data;
-                this.dataset['stopPlace'] = s.value;
+                this.dataset['stopPlaceId'] = id;
+                this.dataset['stopPlace'] = label;
                 updateHeading();
 
                 if (placeToInput.val() && valueIsChanged) {
                     El.byId('departureSubmit').focus();
                 }
-            }, function() {
+            }, function onInvalidate() {
                 delete this.dataset['stopPlaceId'];
                 delete this.dataset['stopPlace'];
             });
@@ -305,7 +267,7 @@ const DepartureInput = new (function() {
     };
 })();
 
-/* Dropdown menus support. */
+/* Mutually exclusive multiple dropdown menus support. */
 const DropdownMenu = new (function() {
 
     var globalCloseDropdownsHandlerRegistered = false;
@@ -338,14 +300,26 @@ const DropdownMenu = new (function() {
                             width: '16', height: '16',
                             alt: 'Meny-symbol'
                         }))
-                    .click((ev) => {
+                    .click(ev => {
                         ev.preventDefault();
-                        El.each('.Dropdown__menu', (el) => {
+                        ev.stopPropagation();
+                        El.each('.Dropdown__menu', el => {
                             if (el.id() === menuId) {
                                 if (el.isVisible()) {
                                     el.fadeOut();
                                 } else {
-                                    el.fadeIn('block').then((el) => {
+                                    El.each('button.Dropdown__item', buttonEl => {
+                                        const action = actions.find(a => a.label === buttonEl.data('label'));
+                                        if (!action.hideIf) return;
+                                        
+                                        if (action.hideIf(buttonEl)) {
+                                            buttonEl.hide();
+                                        } else {
+                                            buttonEl.show();
+                                        }
+                                    }, el);
+                                    
+                                    el.fadeIn('block').then(el => {
                                         ViewportUtils.ensureLowerVisibility(el.unwrap());
                                     });
                                 }
@@ -357,14 +331,17 @@ const DropdownMenu = new (function() {
 
                 El('div.Dropdown__menu.Dropdown__menuborder#' + menuId)
                     .append(
-                        Object.entries(actions).map(([htmlLabel, handler]) => 
-                            El('button.Dropdown__item')
-                                .html(htmlLabel)
-                                .click((ev) => {
-                                    El.byId(menuId).fadeOut()
-                                        .then((el) => handler.call(ev.target, ev));
-                                })
-                        )
+                        actions.map(({label, handler}) => 
+                                    El('button.Dropdown__item')
+                                    .html(label)
+                                    .data('label', label)
+                                    .click(ev => {
+                                        ev.preventDefault();
+                                        ev.stopPropagation();
+                                        El.byId(menuId).fadeOut()
+                                            .then(el => handler.call(ev.target, ev));
+                                    })
+                                   ),
                     )
             );
     };
@@ -496,6 +473,79 @@ function elSituationListItem(situation) {
 }
 
 function elDepartureSection(d) {
+    const menuActions = [
+        {
+            label: 'Snu',
+            handler: function(ev) {
+                const reversed = reverseDepartureInStorage(d.id);
+                El.byId('departure-' + d.id).replaceWith(elDepartureSection(reversed));
+                updateDepartureEl(El.byId('departure-' + d.id));
+            }
+        },
+        {
+            label: '&#x2b; / &#x2212;',
+            handler: function(ev) {
+                showMoreOrLess(El.byId('departure-' + d.id));
+            }
+        },
+        {
+            label: 'Topp',
+            handler: function(ev) {
+                const departureEl = El.byId('departure-' + d.id);
+                if (departureEl.unwrap().previousElementSibling.id === 'noDepartures') {
+                    return;
+                }
+                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                    Storage.moveFirst(d.id);
+                    ViewportUtils.scrollToTop();
+                    El.byId('noDepartures').unwrap()
+                        .insertAdjacentElement('afterend', el.unwrap());
+                    return el;
+                }).then(el => {
+                    el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                });
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId('departure-' + d.id);
+                const atTop = departureEl.unwrap().previousElementSibling.id === 'noDepartures';
+
+                return atTop;
+            }
+        },
+        {
+            label: 'Bunn',
+            handler: function(ev) {
+                const departureEl = El.byId('departure-' + d.id);
+                const bottomEl = El.one('#newDepartureButtons, #newDepartureForm');
+                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
+                    Storage.moveLast(d.id);
+                    el.unwrap().parentElement.insertBefore(el.unwrap(), bottomEl.unwrap());
+                    return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                }).then((el) => {
+                    ViewportUtils.ensureLowerVisibility(el.unwrap());
+                });
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.wrap(buttonEl.unwrap().closest('.departure'));
+                const atBottom = departureEl.unwrap().nextElementSibling.id === 'newDepartureButtons' || departureEl.unwrap().nextElementSibling.id === 'newDepartureForm';
+
+                return atBottom;
+            }
+        },
+        {
+            label: 'Slett',
+            handler: function(ev) {
+                Storage.removeDeparture(d.id);
+                El.byId('departure-' + d.id).fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                    el.remove();
+                    if (El.one('section.departure') === null) {
+                        El.byId('noDepartures').show();
+                    }
+                });
+            }
+        }
+    ];
+
     return El('section.departure#departure-' + d.id)
         .data('id', d.id)
         .data('placeFromId', d.placeFrom.stopId)
@@ -506,56 +556,7 @@ function elDepartureSection(d) {
         .data('numTrips', d.numTrips || 3)
         .append(
             elDepartureHeading(d),
-            
-            DropdownMenu.elDropdownMenu('Meny for avgang', {
-                'Snu': function(ev) {
-                    const reversed = reverseDepartureInStorage(d.id);
-                    El.byId('departure-' + d.id).replaceWith(elDepartureSection(reversed));
-                    updateDepartureEl(El.byId('departure-' + d.id));
-                },
-                '&#x2b; / &#x2212;': function(ev) {
-                    showMoreOrLess(El.byId('departure-' + d.id));
-                },
-                'Topp': function(ev) {
-                    const departureEl = El.byId('departure-' + d.id);
-                    if (departureEl.unwrap().previousElementSibling === El.byId('noDepartures').unwrap()) {
-                        return;
-                    }
-                    
-                    departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
-                        Storage.moveFirst(d.id);
-                        ViewportUtils.scrollToTop();
-                        El.byId('noDepartures').unwrap()
-                            .insertAdjacentElement('afterend', el.unwrap());
-                        return el;
-                    }).then((el) => el.fadeIn(null, defaultFadeTimeoutMilliseconds));
-                },
-                'Bunn': function(ev) {
-                    const departureEl = El.byId('departure-' + d.id);
-                    const bottomEl = El.one('#newDepartureForm, #newDepartureButtons');
-                    if (bottomEl == null
-                        || bottomEl.unwrap().previousElementSibling === departureEl.unwrap()) {
-                        return;
-                    }
-                    
-                    departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
-                        Storage.moveLast(d.id);
-                        el.unwrap().parentElement.insertBefore(el.unwrap(), bottomEl.unwrap());
-                        return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
-                    }).then((el) => ViewportUtils.ensureLowerVisibility(el.unwrap()));
-                },
-                'Slett': function(ev) {
-                    ev.preventDefault();
-                    Storage.removeDeparture(d.id);
-                    El.byId('departure-' + d.id).fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
-                        el.remove();
-                        if (El.one('section.departure') === null) {
-                            El.byId('noDepartures').show();
-                        }
-                    });
-                }
-            }),
-
+            DropdownMenu.elDropdownMenu('Meny for avgang', menuActions),
             El('ul.departureList'),
             El('ul.situationList')
         );
@@ -742,7 +743,7 @@ function appInit() {
 
     window.addEventListener('focus', () => setTimeout(updateDepartures, 500));
 
-    Bootstrap.appUpdateAvailable.then(() => { appUpdateAvailable = true; });
+    Bootstrap.appUpdateCheck.then(updateAvailable => { appUpdateAvailable = updateAvailable; });
 }
 
 /* Local Variables: */

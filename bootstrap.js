@@ -12,9 +12,7 @@ Bootstrap.basePath = Bootstrap.scriptUrl.pathname.replace(/[^\/]*$/, '');
 Bootstrap.V = Bootstrap.scriptUrl.searchParams.get('_V') ?
     Bootstrap.scriptUrl.searchParams.get('_V') : '0';
 
-Bootstrap.scriptDependencies = ['jquery-3.7.1.min.js',
-                                'jquery.autocomplete.min.js',
-                                'el.js',
+Bootstrap.scriptDependencies = ['el.js',
                                 'storage.js',
                                 'entur.js',
                                 'geocomplete.js',
@@ -23,26 +21,21 @@ Bootstrap.scriptDependencies = ['jquery-3.7.1.min.js',
 
 Bootstrap.serviceWorkerScript = 'serviceworker.js';
 
-Bootstrap.appUpdateAvailable = new Promise((resolve, reject) => {
+Bootstrap.appUpdateCheck = new Promise((resolve, reject) => {
     if ('serviceWorker' in navigator) {
+        const currentControllingWorker = navigator.serviceWorker.controller;
+
         window.addEventListener('load', () => {
-            navigator.serviceWorker
-                .register(Bootstrap.serviceWorkerScript)
-                .then((reg) => {
-                    console.log('Service worker registered for scope ' + reg.scope);
-                    reg.addEventListener('updatefound', () => {
+            navigator.serviceWorker.register(Bootstrap.serviceWorkerScript)
+                .then(registration => {
+                    console.log('Service worker registered for scope ' + registration.scope);
+                    registration.addEventListener('updatefound', () => {
                         console.log('A new service worker is being installed.');
-                        const installingWorker = reg.installing;
+                        const installingWorker = registration.installing;
                         installingWorker.addEventListener('statechange', () => {
                             if (installingWorker.state === 'installed'
-                                && navigator.serviceWorker.controller)
-
-                                // TODO unsure about this, but prevent new app
-                                // message when mineavganger has never been run
-                                // on a device before (clean slate)
-                                // The redundant state might be more interesting.
-                                
-                            {
+                                && currentControllingWorker
+                                && installingWorker !== currentControllingWorker) {
                                 resolve(true);
                             } else {
                                 resolve(false);
@@ -55,10 +48,9 @@ Bootstrap.appUpdateAvailable = new Promise((resolve, reject) => {
                     resolve(false);
                 });
         });
-        return;
+    } else {
+        resolve(false);
     }
-
-    resolve(false);
 });
 
 Bootstrap.loadScriptDependencies = () => {
