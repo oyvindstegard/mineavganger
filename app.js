@@ -19,30 +19,6 @@
 
 const defaultFadeTimeoutMilliseconds = 300;
 
-const ViewportUtils = {
-    // TODO switch to intersection observer API
-
-    /* Ensure that bottom of an element is completely visible in viewport,
-     * scroll if necessary. */
-    ensureLowerVisibility: function(element, delay) {
-        if (delay) {
-            setTimeout(() => ViewportUtils.ensureLowerVisibility(element), delay);
-            return;
-        }
-
-        const viewportLower = window.visualViewport.height + window.visualViewport.pageTop;
-        const elementLower = element.getBoundingClientRect().bottom;
-        const pixelsBelow = elementLower - viewportLower;
-        if (pixelsBelow > -10) {
-            window.scrollBy(0, pixelsBelow + 10);
-        }
-    },
-    
-    scrollToTop: function() {
-        window.scroll(0,0);
-    }
-};
-
 /**
  * Attaches touch event handlers to window and invokes
  * provided callback if a touch swipe down is detected.
@@ -111,9 +87,7 @@ const DepartureInput = new (function() {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
             placeholder: `Fra ${modeDesc.place()}`
-        }).event('focus', (ev) => {
-            ViewportUtils.ensureLowerVisibility(El.byId('departureSubmit').unwrap(), 500);
-        });
+        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
         const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet.');
@@ -121,9 +95,7 @@ const DepartureInput = new (function() {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
-        }).event('focus', (ev) => {
-            ViewportUtils.ensureLowerVisibility(El.byId('departureSubmit').unwrap(), 500);
-        });
+        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
         // New departure dynamic heading
         const updateHeading = function() {
@@ -291,7 +263,9 @@ const DropdownMenu = new (function() {
 
         const menuId = 'Dropdown__menu-' + nextId;
 
-        return El('div.Dropdown__container#Dropdown__container-' + nextId)
+        const dropdownContainerId = 'Dropdown__container-' + nextId;
+
+        return El('div.Dropdown__container#' + dropdownContainerId)
             .append(
                 El('button.Dropdown__button#Dropdown__button-' + nextId, { title })
                     .append(
@@ -303,15 +277,18 @@ const DropdownMenu = new (function() {
                     .click(ev => {
                         ev.preventDefault();
                         ev.stopPropagation();
+                        
                         El.each('.Dropdown__menu', el => {
                             if (el.id() === menuId) {
                                 if (el.isVisible()) {
                                     el.fadeOut();
                                 } else {
                                     El.each('button.Dropdown__item', buttonEl => {
-                                        const action = actions.find(a => a.label === buttonEl.data('label'));
+                                        const action = actions.find(
+                                            a => a.label === buttonEl.data('label'));
+
                                         if (!action.hideIf) return;
-                                        
+
                                         if (action.hideIf(buttonEl)) {
                                             buttonEl.hide();
                                         } else {
@@ -319,9 +296,7 @@ const DropdownMenu = new (function() {
                                         }
                                     }, el);
                                     
-                                    el.fadeIn('block').then(el => {
-                                        ViewportUtils.ensureLowerVisibility(el.unwrap());
-                                    });
+                                    el.fadeIn('block').then(el => el.scrollTo());
                                 }
                             } else {
                                 el.fadeOut();
@@ -464,6 +439,7 @@ function collectSituations(tripPatterns) {
 function elSituationListItem(situation) {
     return El('li.situation').html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
         .append(El('a', {href: '#'})
+                .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
                     El('li.situation__expanded')
@@ -497,12 +473,12 @@ function elDepartureSection(d) {
                 }
                 departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     Storage.moveFirst(d.id);
-                    ViewportUtils.scrollToTop();
                     El.byId('noDepartures').unwrap()
                         .insertAdjacentElement('afterend', el.unwrap());
                     return el;
                 }).then(el => {
-                    el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                    window.scrollTo(0,0);
+                    return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
                 });
             },
             hideIf: function(buttonEl) {
@@ -517,12 +493,10 @@ function elDepartureSection(d) {
             handler: function(ev) {
                 const departureEl = El.byId('departure-' + d.id);
                 const bottomEl = El.one('#newDepartureButtons, #newDepartureForm');
-                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then((el) => {
+                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     Storage.moveLast(d.id);
                     el.unwrap().parentElement.insertBefore(el.unwrap(), bottomEl.unwrap());
                     return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
-                }).then((el) => {
-                    ViewportUtils.ensureLowerVisibility(el.unwrap());
                 });
             },
             hideIf: function(buttonEl) {
