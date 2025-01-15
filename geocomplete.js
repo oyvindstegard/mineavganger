@@ -96,7 +96,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
                         }
                     });
                 })
-                .event('mouseover', ev => {
+                .event('mousemove', ev => {
                     El.if(ev.target.closest('li.suggestion-item'), el => {
                         El.each('li.suggestion-item.selected', el => {
                             el.removeClass('selected');
@@ -128,7 +128,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             suggestionList.append(listItem);
         });
 
-        const boxWidth = inputElement.unwrap().getBoundingClientRect().width - 1;
+        const boxWidth = inputElement.unwrap().getBoundingClientRect().width -1;
 
         suggestionBox.unwrap().replaceChildren(suggestionList.unwrap());
         suggestionBox
@@ -198,9 +198,8 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             return;
         }
         if (ev.keyCode === 13) {
-            ev.preventDefault();
-
             El.if('li.suggestion-item.selected', el => {
+                ev.preventDefault();
                 select(el.data('suggestionId'), el.data('suggestionLabel'));
             }, suggestionBox);
             

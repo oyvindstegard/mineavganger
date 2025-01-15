@@ -82,7 +82,7 @@ const DepartureInput = new (function() {
         const modeDesc = Entur.transportModes[transportMode];
 
         const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
-        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet.');
+        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet');
         const placeFromInput = El('input#placeFromInput', {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
@@ -90,7 +90,7 @@ const DepartureInput = new (function() {
         }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
-        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet.');
+        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet');
         const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
@@ -112,30 +112,52 @@ const DepartureInput = new (function() {
             El.byId('newDepartureHeading').replaceWith(headingEl);
         };
 
-        // Input validation
+        const updateFromInvalid = function(reason) {
+            if (reason) {
+                placeFromInvalid.css('visibility', 'visible').text(reason);
+                placeFromInput.addClass('invalid');
+                return;
+            }
+
+            placeFromInput.removeClass('invalid');
+            placeFromInvalid.css('visibility', 'hidden');
+        };
+
+        const updateToInvalid = function(reason) {
+            if (reason) {
+                placeToInvalid.css('visibility', 'visible').text(reason);
+                placeToInput.addClass('invalid');
+                return;
+            }
+
+            placeToInput.removeClass('invalid');
+            placeToInvalid.css('visibility', 'hidden');
+        };
+
         const validateInputs = function(ev) {
             let ok = true;
 
             if (placeFromInput.val() !== placeFromInput.data('stopPlace')) {
-                placeFromInvalid.show();
-                placeFromInput.addClass('invalid');
+                updateFromInvalid('Ikke funnet');
                 ok = false;
-            } else {
-                placeFromInput.removeClass('invalid');
-                placeFromInvalid.hide();
             }
 
             if (placeToInput.val() !== placeToInput.data('stopPlace')) {
-                placeToInvalid.show();
-                placeToInput.addClass('invalid');
+                updateToInvalid('Ikke funnet');
                 ok = false;
-            } else {
-                placeToInput.removeClass('invalid');
-                placeToInvalid.hide();
             }
 
-            // TODO validate that from/to is not the same stop place
-            
+            if (ok && placeFromInput.data('stopPlaceId') === placeToInput.data('stopPlaceId')) {
+                updateFromInvalid('Fra og til er samme stoppested.');
+                updateToInvalid('Fra og til er samme stoppested.');
+                ok = false;
+            }
+
+            if (ok) {
+                updateFromInvalid();
+                updateToInvalid();
+            }
+
             return ok;
         };
         
@@ -144,12 +166,11 @@ const DepartureInput = new (function() {
             function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
                 let valueIsChanged = (id !== this.dataset['stopPlaceId']);
-
-                console.log('id=' + id);
                 
                 this.dataset['stopPlaceId'] = id;
                 this.dataset['stopPlace'] = label;
                 updateHeading();
+                updateFromInvalid();
 
                 if (placeFromInput.val() && valueIsChanged) {
                     placeToInput.focus();
@@ -170,6 +191,7 @@ const DepartureInput = new (function() {
                 this.dataset['stopPlaceId'] = id;
                 this.dataset['stopPlace'] = label;
                 updateHeading();
+                updateToInvalid();
 
                 if (placeToInput.val() && valueIsChanged) {
                     El.byId('departureSubmit').focus();
@@ -449,25 +471,41 @@ function elSituationListItem(situation) {
 }
 
 function elDepartureSection(d) {
+    const departureId = 'departure-' + d.id;
+    
     const menuActions = [
         {
             label: 'Snu',
             handler: function(ev) {
                 const reversed = reverseDepartureInStorage(d.id);
-                El.byId('departure-' + d.id).replaceWith(elDepartureSection(reversed));
-                updateDepartureEl(El.byId('departure-' + d.id));
+                El.byId(departureId).replaceWith(elDepartureSection(reversed));
+                updateDepartureEl(El.byId(departureId));
             }
         },
         {
-            label: '&#x2b; / &#x2212;',
+            label: 'Færre',
             handler: function(ev) {
-                showMoreOrLess(El.byId('departure-' + d.id));
+                setDepartureElementNumTrips(El.byId(departureId), 3);
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId(departureId);
+                return departureEl.data('numTrips') === '3';
+            }
+        },
+        {
+            label: 'Flere',
+            handler: function(ev) {
+                setDepartureElementNumTrips(El.byId(departureId), 6);
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId(departureId);
+                return departureEl.data('numTrips') === '6';
             }
         },
         {
             label: 'Topp',
             handler: function(ev) {
-                const departureEl = El.byId('departure-' + d.id);
+                const departureEl = El.byId(departureId);
                 if (departureEl.unwrap().previousElementSibling.id === 'noDepartures') {
                     return;
                 }
@@ -482,7 +520,7 @@ function elDepartureSection(d) {
                 });
             },
             hideIf: function(buttonEl) {
-                const departureEl = El.byId('departure-' + d.id);
+                const departureEl = El.byId(departureId);
                 const atTop = departureEl.unwrap().previousElementSibling.id === 'noDepartures';
 
                 return atTop;
@@ -491,7 +529,7 @@ function elDepartureSection(d) {
         {
             label: 'Bunn',
             handler: function(ev) {
-                const departureEl = El.byId('departure-' + d.id);
+                const departureEl = El.byId(departureId);
                 const bottomEl = El.one('#newDepartureButtons, #newDepartureForm');
                 departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     Storage.moveLast(d.id);
@@ -510,9 +548,9 @@ function elDepartureSection(d) {
             label: 'Slett',
             handler: function(ev) {
                 Storage.removeDeparture(d.id);
-                El.byId('departure-' + d.id).fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                El.byId(departureId).fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     el.remove();
-                    if (El.one('section.departure') === null) {
+                    if (El.none('section.departure')) {
                         El.byId('noDepartures').show();
                     }
                 });
@@ -552,13 +590,10 @@ function spinOnce(element) {
         .addClass('spinonce');
 }
 
-function showMoreOrLess(element) {
+function setDepartureElementNumTrips(element, numTrips) {
+    numTrips = numTrips ? numTrips : 3;
     const el = El.wrap(element);
-    if (!el.data('numTrips') || el.data('numTrips') == 3) {
-        updateDepartureEl(el.data('numTrips', 6));
-    } else {
-        updateDepartureEl(el.data('numTrips', 3));
-    }
+    updateDepartureEl(el.data('numTrips', numTrips));
     
     // Persist state
     const d = Storage.getDeparture(parseInt(el.data('id')));
@@ -593,7 +628,7 @@ function updateDepartureEl(departureSectionEl) {
     const placeToName = el.data('placeToName');
     
     Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
-        .then((result) => {
+        .then(result => {
             const listItems = result.data.trip.tripPatterns.map((trip, idx) =>
                 El('li').append(
                     elLineCodeElement(trip),
@@ -607,8 +642,8 @@ function updateDepartureEl(departureSectionEl) {
                       collectSituations(result.data.trip.tripPatterns).map(elSituationListItem);
                 El('ul.departureList').append(listItems).replace(El.one('ul.departureList', el));
                 El('ul.situationList').append(situationListItems).replace(El.one('ul.situationList', el));
-            } else {
-                const modeDesc = Entur.transportModes[mode];
+            } else { 
+               const modeDesc = Entur.transportModes[mode];
                 El.one('ul.departureList', el).replaceWith(
                     El('ul.departureList').append(
                         El('li').text(

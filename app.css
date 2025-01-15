@@ -222,8 +222,6 @@ button {
 /* Inputs */
 input {
     font-size: 1rem;
-    margin-bottom: 1rem;
-    margin-right: 0.5rem;
     padding: 0.5rem;
     width: 300px;
     border: 1px solid gray;
@@ -233,7 +231,11 @@ input.invalid {
 }
 span.invalid {
     font-style: italic;
-    display: none;
+    height: 1rem;
+    margin-top: 0.3rem;
+    margin-bottom: 0.6rem;
+    display: block;
+    visibility: hidden;
 }
 label {
     display: none;
@@ -244,13 +246,12 @@ div.suggestion-box {
     position: absolute;
     z-index: 1;
     background-color: #fff;
-    border: 1px solid #ddd;
+    border: 1px solid #aaa;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin: 0;
     max-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
-    translate: 0 -0.75rem;
 }
 ul.suggestion-list {
     padding: 0;

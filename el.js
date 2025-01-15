@@ -388,6 +388,10 @@ El.one = function(selector, context) {
     return El.wrap(context.querySelector(selector));
 };
 
+El.none = function(selector, context) {
+    return El.one(selector, context) === null;
+};
+
 El.each = function(selector, callback, context) {
     if (context instanceof El.ElWrapper) {
         context = context.unwrap();
