@@ -380,13 +380,6 @@ function elLineCodeElement(trip) {
     }).html(publicCode);
 }
 
-function elSituationSymbolElement(trip) {
-    if (trip.legs[0].situations && trip.legs[0].situations.length) {
-        return El('span').html('&#x26a0;&#xfe0f;');
-    }
-    return null;
-}
-
 function elTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
     const startTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.expectedDepartureTime);
@@ -412,39 +405,37 @@ function elTimeElements(trip, displayMinutesToStart) {
  * Collect and transform list of unique situation objects from a set of trip patterns.
  * Each object in returned list has shape:
  *  {
- *    "summary": ""<Summary of situation in Norwegian>"",
- *    "description": "<Description of situation in Norwegian>",
- *    "validityPeriod": {
- *      "startTime": "<timestamp>",
- *      "endTime": "<timestamp>"
- *    }
+ *    "id":            "<opaque situation identifier string>",
+ *    "n":             <n-th collected situation, starting from 1>,
+ *    "summary":       "<Summary of situation in Norwegian>",
+ *    "description":   "<Description of situation in Norwegian>"
+ *    "appliesTo":     [Array of trip/leg-id strings]
  *  }
  *  @returns {Array} list of unique situation objects
  */
 function collectSituations(tripPatterns) {
     const situations = [];
+    let n = 1;
     
-    tripPatterns.forEach(function(tripPattern) {
-        tripPattern.legs.forEach(function(leg) {
-            leg.situations.forEach(function(situation) {
-                const description = situation.description.find(function(description) {
-                    return description.language === 'no';
-                });
-                const summary = situation.summary.find(function(summary) {
-                    return summary.language === 'no';
-                });
+    tripPatterns.forEach(tripPattern => {
+        tripPattern.legs.forEach(leg => {
+            leg.situations.forEach(situation => {
+                const alreadyCollected = situations.find(s => s.id === situation.id);
+                if (alreadyCollected) {
+                    alreadyCollected.appliesTo.push(leg.id);
+                    return;
+                }
+
+                const description = situation.description.find(desc => desc.language === 'no');
+                const summary = situation.summary.find(s => s.language === 'no');
+
                 if (summary && description) {
-                    if (situations.find(function(s) {
-                        return s.summary === summary.value &&
-                            s.description === description.value;
-                    })) {
-                        return;
-                    }
-                    
                     situations.push({
+                        id: situation.id,
+                        n: n++,
                         summary: summary.value,
                         description: description.value,
-                        validityPeriod: situation.validityPeriod
+                        appliesTo: [leg.id]
                     });
                 }
             });
@@ -454,18 +445,36 @@ function collectSituations(tripPatterns) {
     return situations;
 }
 
+function elSituationSymbolElement(trip, collectedSituations, showSituationNumbers) {
+    const leg = trip.legs[0];
+    const appliesToTrip = collectedSituations.filter(s => s.appliesTo.indexOf(leg.id) > -1);
+    if (appliesToTrip.length) {
+        return El('span').html('&#x26a0;&#xfe0f;').append(
+            showSituationNumbers ?
+                El('span.situationNumber')
+                .css('font-size', '90%')
+                .html(appliesToTrip.map(s => `(${s.n})`).join(',')) : null);
+    }
+    return null;
+}
+
 /**
  * Render a situation list item for a situation object as returned by
  * {@link collectSituations}.
  */
-function elSituationListItem(situation) {
-    return El('li.situation').html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
+function elSituationListItem(situation, showSituationNumber) {
+    const situationNumberHtml = `<span class="situationNumber">(${situation.n})</span>`;
+    return El('li.situation').html('&#x26a0;&#xfe0f;'
+                                   + (showSituationNumber ? situationNumberHtml : '')
+                                   + ' ' + situation.summary + ' ')
         .append(El('a', {href: '#'})
                 .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
                     El('li.situation__expanded')
-                        .html('&#x26a0;&#xfe0f; ' + situation.description)
+                        .html('&#x26a0;&#xfe0f;'
+                              + (showSituationNumber ? situationNumberHtml : '')
+                              + ' ' + situation.description)
                         .replace(ev.target.parentElement);
                 }));
 }
@@ -479,7 +488,7 @@ function elDepartureSection(d) {
             handler: function(ev) {
                 const reversed = reverseDepartureInStorage(d.id);
                 El.byId(departureId).replaceWith(elDepartureSection(reversed));
-                updateDepartureEl(El.byId(departureId));
+                updateDeparture(El.byId(departureId));
             }
         },
         {
@@ -593,7 +602,7 @@ function spinOnce(element) {
 function setDepartureElementNumTrips(element, numTrips) {
     numTrips = numTrips ? numTrips : 3;
     const el = El.wrap(element);
-    updateDepartureEl(el.data('numTrips', numTrips));
+    updateDeparture(el.data('numTrips', numTrips));
     
     // Persist state
     const d = Storage.getDeparture(parseInt(el.data('id')));
@@ -609,8 +618,8 @@ function reverseDepartureInStorage(departureId) {
     return Storage.saveDeparture(departure);
 }
 
-function updateDepartureEl(departureSectionEl) {
-    const el = departureSectionEl;
+function updateDeparture(departureSection) {
+    const el = El.wrap(departureSection);
 
     if (el.data('loading') === 'true') {
         return;
@@ -629,17 +638,20 @@ function updateDepartureEl(departureSectionEl) {
     
     Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
         .then(result => {
+            const situations = collectSituations(result.data.trip.tripPatterns);
+            const showSituationNumbers = situations.length > 1;
+            
             const listItems = result.data.trip.tripPatterns.map((trip, idx) =>
                 El('li').append(
                     elLineCodeElement(trip),
                     elTimeElements(trip, idx < 2),
                     elPlatformElement(trip),
-                    elSituationSymbolElement(trip)
+                    elSituationSymbolElement(trip, situations, showSituationNumbers)
                 ));
 
             if (listItems.length) {
-                const situationListItems =
-                      collectSituations(result.data.trip.tripPatterns).map(elSituationListItem);
+                const situationListItems = situations.map(s => elSituationListItem(s, showSituationNumbers));
+                
                 El('ul.departureList').append(listItems).replace(El.one('ul.departureList', el));
                 El('ul.situationList').append(situationListItems).replace(El.one('ul.situationList', el));
             } else { 
@@ -687,7 +699,7 @@ function updateDepartures(userIntent) {
         || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
         spinOnce(El.byId('logospinner').unwrap());
 
-        El.each('main section.departure', updateDepartureEl);
+        El.each('main section.departure', updateDeparture);
 
         lastUpdate = new Date();
         El.byId('last-updated-info').text(lastUpdate.hhmm());
@@ -695,7 +707,7 @@ function updateDepartures(userIntent) {
         if (appUpdateAvailable) {
             El.byId('appUpdate').show();
         }
-        if (!El.one('main section.departure')) {
+        if (El.none('main section.departure')) {
             El.byId('noDepartures').show();
         }
     }
@@ -708,13 +720,13 @@ function renderApp() {
 
     const appContent = El('main');
 
-    El('section#appUpdate').append(El('p').html(
+    El('section#appUpdate').html(
         '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>'
-    )).appendTo(appContent);
+    ).appendTo(appContent);
 
-    El('section#noDepartures').append(El('p').html(
+    El('section#noDepartures').html(
         '<p>Ingen avganger er lagret.</p><p>Legg til nye ved å velge transportmiddel med knappene under.</p>'
-    )).appendTo(appContent);
+    ).appendTo(appContent);
 
     departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
 

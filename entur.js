@@ -100,6 +100,7 @@ const Entur = new function() {
                   {
                     tripPatterns {
                       legs {
+                        id
                         authority {
                           name
                         }
@@ -129,6 +130,7 @@ const Entur = new function() {
                           }
                         }
                         situations {
+                          id
                           summary {
                             value
                             language
@@ -136,10 +138,6 @@ const Entur = new function() {
                           description {
                             value
                             language
-                          }
-                          validityPeriod {
-                            startTime
-                            endTime
                           }
                         }
                         mode
@@ -220,7 +218,7 @@ const Entur = new function() {
         url.searchParams.set('layers', 'venue');
         url.searchParams.set('categories', transportModeGeocoderCategories[transportMode].join(','));
         url.searchParams.set('text', text);
-        
+
         const request = new Request(url, {
             method: 'GET',
             mode: 'cors',
