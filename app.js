@@ -473,7 +473,7 @@ function elSituationListItem(situation, showSituationNumber) {
                     postponeUpdate(20);
                     El('li.situation__expanded')
                         .html((showSituationNumber ? situationNumberHtml : '')
-                              + ' &#x26a0;&#xfe0f; ' + situation.description)
+                              + '&#x26a0;&#xfe0f; ' + situation.description)
                         .replace(ev.target.parentElement);
                 }));
 }
