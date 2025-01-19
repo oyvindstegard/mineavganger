@@ -310,6 +310,14 @@ El.ElWrapper.prototype.isAttached = function() {
     return this.element.parentElement !== null;
 };
 
+El.ElWrapper.prototype.prev = function() {
+    return El.wrap(this.element.previousElementSibling);
+};
+
+El.ElWrapper.prototype.next = function() {
+    return El.wrap(this.element.nextElementSibling);
+};
+
 El.ElWrapper.prototype.unwrap = function() {
     return this.element;
 };

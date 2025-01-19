@@ -169,20 +169,19 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
         }
         if (ev.keyCode === 38 || ev.keyCode === 40) {
             ev.preventDefault();
-            const selected = El.one('li.suggestion-item.selected', suggestionBox);
-            if (selected) {
-                const selectedElement = selected.unwrap();
-                let elementToSelect = null;
-                if (ev.keyCode === 38 && selectedElement.previousElementSibling) {
-                    elementToSelect = selectedElement.previousElementSibling;
-                } else if (ev.keyCode === 40 && selectedElement.nextElementSibling) {
-                    elementToSelect = selectedElement.nextElementSibling;
+            const selectedEl = El.one('li.suggestion-item.selected', suggestionBox);
+            if (selectedEl) {
+                let toSelectEl = null;
+                if (ev.keyCode === 38 && selectedEl.prev()) {
+                    toSelectEl = selectedEl.prev();
+                } else if (ev.keyCode === 40 && selectedEl.next()) {
+                    toSelectEl = selectedEl.next();
                 }
-                if (elementToSelect) {
-                    selectedElement.classList.remove('selected');
-                    elementToSelect.classList.add('selected');
+                if (toSelectEl) {
+                    selectedEl.removeClass('selected');
+                    toSelectEl.addClass('selected');
                     window.requestAnimationFrame(() => {
-                        elementToSelect.scrollIntoView({block: 'nearest'});
+                        toSelectEl.unwrap().scrollIntoView({block: 'nearest'});
                     });
                 }
             } else {

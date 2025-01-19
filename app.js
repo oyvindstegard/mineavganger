@@ -453,7 +453,7 @@ function elSituationSymbolElement(trip, collectedSituations, showSituationNumber
             showSituationNumbers ?
                 El('span.situationNumber')
                 .css('font-size', '90%')
-                .html(appliesToTrip.map(s => `(${s.n})`).join(',')) : null);
+                .html(' ' + appliesToTrip.map(s => s.n).join(', ')) : null);
     }
     return null;
 }
@@ -463,19 +463,17 @@ function elSituationSymbolElement(trip, collectedSituations, showSituationNumber
  * {@link collectSituations}.
  */
 function elSituationListItem(situation, showSituationNumber) {
-    const situationNumberHtml = `<span class="situationNumber">(${situation.n})</span>`;
-    return El('li.situation').html('&#x26a0;&#xfe0f;'
-                                   + (showSituationNumber ? situationNumberHtml : '')
-                                   + ' ' + situation.summary + ' ')
+    const situationNumberHtml = `${situation.n}.&nbsp;`;
+    return El('li.situation').html((showSituationNumber ? situationNumberHtml : '')
+                                   + '&#x26a0;&#xfe0f; ' + situation.summary + ' ')
         .append(El('a', {href: '#'})
                 .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
                     postponeUpdate(20);
                     El('li.situation__expanded')
-                        .html('&#x26a0;&#xfe0f;'
-                              + (showSituationNumber ? situationNumberHtml : '')
-                              + ' ' + situation.description)
+                        .html((showSituationNumber ? situationNumberHtml : '')
+                              + ' &#x26a0;&#xfe0f; ' + situation.description)
                         .replace(ev.target.parentElement);
                 }));
 }
@@ -516,7 +514,7 @@ function elDepartureSection(d) {
             label: 'Topp',
             handler: function(ev) {
                 const departureEl = El.byId(departureId);
-                if (departureEl.unwrap().previousElementSibling.id === 'noDepartures') {
+                if (departureEl.prev().id() === 'noDepartures') {
                     return;
                 }
                 departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
@@ -531,7 +529,7 @@ function elDepartureSection(d) {
             },
             hideIf: function(buttonEl) {
                 const departureEl = El.byId(departureId);
-                const atTop = departureEl.unwrap().previousElementSibling.id === 'noDepartures';
+                const atTop = departureEl.prev().id() === 'noDepartures';
 
                 return atTop;
             }
@@ -549,7 +547,8 @@ function elDepartureSection(d) {
             },
             hideIf: function(buttonEl) {
                 const departureEl = El.wrap(buttonEl.unwrap().closest('.departure'));
-                const atBottom = departureEl.unwrap().nextElementSibling.id === 'newDepartureButtons' || departureEl.unwrap().nextElementSibling.id === 'newDepartureForm';
+                const atBottom = departureEl.next().id() === 'newDepartureButtons'
+                          || departureEl.next().id() === 'newDepartureForm';
 
                 return atBottom;
             }
