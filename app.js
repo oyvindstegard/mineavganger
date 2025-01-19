@@ -471,6 +471,7 @@ function elSituationListItem(situation, showSituationNumber) {
                 .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
+                    postponeUpdate(20);
                     El('li.situation__expanded')
                         .html('&#x26a0;&#xfe0f;'
                               + (showSituationNumber ? situationNumberHtml : '')
@@ -686,6 +687,7 @@ function updateDeparture(departureSection) {
         });
 }
 
+const updateIntervalSeconds = 60;
 var lastUpdate = null;
 var updateTimeout = null;
 var appUpdateAvailable = false;
@@ -696,7 +698,7 @@ function updateDepartures(userIntent) {
     }
 
     if (userIntent === true || lastUpdate === null
-        || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
+        || (new Date().getTime() - lastUpdate.getTime()) >= updateIntervalSeconds*1000) {
         spinOnce(El.byId('logospinner').unwrap());
 
         El.each('main section.departure', updateDeparture);
@@ -712,7 +714,25 @@ function updateDepartures(userIntent) {
         }
     }
 
-    updateTimeout = setTimeout(updateDepartures, 60000);
+    updateTimeout = setTimeout(updateDepartures, updateIntervalSeconds*1000);
+}
+
+function postponeUpdate(secondsToPostpone) {
+    if (updateTimeout) {
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
+    }
+
+    const nowSeconds = new Date().getTime() / 1000;
+    
+    const nextRegularUpdateInSeconds =
+              lastUpdate ? updateIntervalSeconds - (nowSeconds - lastUpdate.getTime()/1000) : 0;
+
+    const postponedUpdateInSeconds = Math.max(nextRegularUpdateInSeconds, 0) + secondsToPostpone;
+
+    const postponedTimeoutSeconds = Math.min(updateIntervalSeconds, postponedUpdateInSeconds);
+
+    updateTimeout = setTimeout(updateDepartures, postponedTimeoutSeconds*1000);
 }
 
 function renderApp() {
