@@ -721,7 +721,7 @@ function renderApp() {
     const appContent = El('main');
 
     El('section#appUpdate').html(
-        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>'
+        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">trykk for å oppdatere</a>.</p>'
     ).appendTo(appContent);
 
     El('section#noDepartures').html(
