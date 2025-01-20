@@ -128,7 +128,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             suggestionList.append(listItem);
         });
 
-        const boxWidth = inputElement.unwrap().getBoundingClientRect().width -1;
+        const boxWidth = inputElement.unwrap().getBoundingClientRect().width - 1;
 
         suggestionBox.unwrap().replaceChildren(suggestionList.unwrap());
         suggestionBox
@@ -160,7 +160,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
     };
 
     const keydownListener = (ev) => {
-        if (!suggestionBox.isVisible()) {
+        if (suggestionBox.isHidden()) {
             return;
         }
         if (ev.keyCode === 9) {

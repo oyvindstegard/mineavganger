@@ -302,7 +302,7 @@ const DropdownMenu = new (function() {
                         
                         El.each('.Dropdown__menu', el => {
                             if (el.id() === menuId) {
-                                if (el.isVisible()) {
+                                if (!el.isHidden()) {
                                     el.fadeOut();
                                 } else {
                                     El.each('button.Dropdown__item', buttonEl => {
@@ -327,6 +327,7 @@ const DropdownMenu = new (function() {
                     }),
 
                 El('div.Dropdown__menu.Dropdown__menuborder#' + menuId)
+                    .hide()
                     .append(
                         actions.map(({label, handler}) => 
                                     El('button.Dropdown__item')
@@ -710,6 +711,8 @@ function updateDepartures(userIntent) {
         }
         if (El.none('main section.departure')) {
             El.byId('noDepartures').show();
+        } else {
+            El.byId('noDepartures').hide();
         }
     }
 
@@ -741,11 +744,11 @@ function renderApp() {
 
     El('section#appUpdate').html(
         '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">trykk for å oppdatere</a>.</p>'
-    ).appendTo(appContent);
+    ).hide().appendTo(appContent);
 
     El('section#noDepartures').html(
         '<p>Ingen avganger er lagret.</p><p>Legg til nye ved å velge transportmiddel med knappene under.</p>'
-    ).appendTo(appContent);
+    ).hide().appendTo(appContent);
 
     departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
 

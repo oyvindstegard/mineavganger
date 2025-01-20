@@ -88,10 +88,10 @@ El.ElWrapper.prototype.removeClass = function(className) {
 
 El.ElWrapper.prototype.css = function(cssProperty, value) {
     if (value) {
-        this.element.style[cssProperty] = value;
+        this.element.style.setProperty(cssProperty, value);
         return this;
     }
-    return this.element.style[cssProperty];
+    return this.element.style.getPropertyValue(cssProperty);
 };
 
 El.ElWrapper.prototype.id = function(id) {
@@ -197,23 +197,6 @@ El.ElWrapper.prototype.click = function(handler) {
     return this.event('click', handler);
 };
 
-El.ElWrapper.prototype.show = function(cssDisplayShowValue) {
-    if (this.element.style.display === 'none') {
-        this.element.style.removeProperty('display');
-    }
-
-    if (!this.isVisible() || this.element.parentElement === null) {
-        // Computed style likely makes element not displayed by default, override required.
-        this.element.style.display = cssDisplayShowValue ? cssDisplayShowValue : 'block';
-    }
-    return this;
-};
-
-El.ElWrapper.prototype.hide = function() {
-    this.element.style.display = 'none';
-    return this;
-};
-
 El.ElWrapper.prototype.scrollTo = function(marginX, marginY) {
     const rect = this.element.getBoundingClientRect();
     const viewportHeight = window.visualViewport.height;
@@ -245,9 +228,23 @@ El.ElWrapper.prototype.focus = function() {
     return this;
 };
 
+El.ElWrapper.prototype.show = function(cssDisplayShowValue) {
+    if (cssDisplayShowValue) {
+        this.element.style.setProperty('display', cssDisplayShowValue);
+    } else if (this.element.style.display === 'none') {
+        this.element.style.removeProperty('display');
+    }
+    return this;
+};
+
+El.ElWrapper.prototype.hide = function() {
+    this.element.style.setProperty('display', 'none');
+    return this;
+};
+
 El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
     return new Promise((resolve) => {
-        if (!this.isVisible()) {
+        if (this.isHidden()) {
             resolve(this);
             return;
         }
@@ -276,7 +273,7 @@ El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
 
 El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationMilliseconds) {
     return new Promise((resolve) => {
-        if (this.isVisible()) {
+        if (!this.isHidden()) {
             resolve(this);
             return;
         }
@@ -302,8 +299,8 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
     });
 };
 
-El.ElWrapper.prototype.isVisible = function() {
-    return this.element.checkVisibility();
+El.ElWrapper.prototype.isHidden = function() {
+    return this.element.style.display === 'none';
 };
 
 El.ElWrapper.prototype.isAttached = function() {
