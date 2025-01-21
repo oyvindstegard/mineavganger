@@ -465,16 +465,18 @@ function elSituationSymbolElement(trip, collectedSituations, showSituationNumber
  */
 function elSituationListItem(situation, showSituationNumber) {
     const situationNumberHtml = `${situation.n}.&nbsp;`;
-    return El('li.situation').html((showSituationNumber ? situationNumberHtml : '')
-                                   + '&#x26a0;&#xfe0f; ' + situation.summary + ' ')
+    return El('li.situation').html('&#x26a0;&#xfe0f; '
+                                   + (showSituationNumber ? situationNumberHtml : '')
+                                   + situation.summary + ' ')
         .append(El('a', {href: '#'})
                 .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
                     postponeUpdate(20);
                     El('li.situation__expanded')
-                        .html((showSituationNumber ? situationNumberHtml : '')
-                              + '&#x26a0;&#xfe0f; ' + situation.description)
+                        .html('&#x26a0;&#xfe0f; ' +
+                              (showSituationNumber ? situationNumberHtml : '')
+                              + situation.description)
                         .replace(ev.target.parentElement);
                 }));
 }

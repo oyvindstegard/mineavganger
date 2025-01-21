@@ -246,6 +246,10 @@ El.ElWrapper.prototype.hide = function() {
     return this;
 };
 
+El.ElWrapper.prototype.isHidden = function() {
+    return this.element.style.display === 'none';
+};
+
 El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
     return new Promise((resolve) => {
         if (this.isHidden()) {
@@ -266,7 +270,7 @@ El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
 
         window.requestAnimationFrame(() => {
             if (animationDurationMilliseconds) {
-                this.element.style.animationDuration = animationDurationMilliseconds + 'ms';
+                this.element.style.setProperty('animationDuration', animationDurationMilliseconds + 'ms');
             }
             if (! this.element.classList.replace('el-fadein', 'el-fadeout')) {
                 this.element.classList.add('el-fadeout');
@@ -301,10 +305,6 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
             }
         });
     });
-};
-
-El.ElWrapper.prototype.isHidden = function() {
-    return this.element.style.display === 'none';
 };
 
 El.ElWrapper.prototype.isAttached = function() {
@@ -383,11 +383,7 @@ El.byId = function(id) {
 };
 
 El.one = function(selector, context) {
-    context = El.unwrap(context);
-    if (!context) {
-        context = document;
-    }
-    
+    context = El.unwrap(context) || document;
     return El.wrap(context.querySelector(selector));
 };
 
@@ -396,10 +392,7 @@ El.none = function(selector, context) {
 };
 
 El.each = function(selector, callback, context) {
-    context = El.unwrap(context);
-    if (!context) {
-        context = document;
-    }
+    context = El.unwrap(context) || document;
     context.querySelectorAll(selector).forEach(
         (element, idx) => callback.call(element, El.wrap(element), idx));
 };
