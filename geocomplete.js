@@ -86,7 +86,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
     const maybeShowSuggestions = (text, suggestions) => {
         if (!suggestionBox.isAttached()) {
             // Lazily attach to DOM and initialize
-            inputElement.unwrap().after(suggestionBox.unwrap());
+            inputElement.next(suggestionBox);
             
             suggestionBox
                 .event('click', ev => {
@@ -111,7 +111,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             suggestionBox.hide().empty();
             return;
         }
-        if (document.activeElement !== inputElement.unwrap()) {
+        if (! inputElement.hasFocus()) {
             suggestionBox.hide().empty();
             return;
         }

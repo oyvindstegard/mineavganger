@@ -232,6 +232,10 @@ El.ElWrapper.prototype.focus = function() {
     return this;
 };
 
+El.ElWrapper.prototype.hasFocus = function() {
+    return this.element === document.activeElement;
+};
+
 El.ElWrapper.prototype.show = function(cssDisplayShowValue) {
     if (cssDisplayShowValue) {
         this.element.style.setProperty('display', cssDisplayShowValue);
@@ -308,15 +312,35 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
 };
 
 El.ElWrapper.prototype.isAttached = function() {
-    return this.element.parentElement !== null;
+    return this.element.parentElement !== null || this.element === document.documentElement;
 };
 
-El.ElWrapper.prototype.prev = function() {
+El.ElWrapper.prototype.prev = function(...insertBefore) {
+    if (insertBefore && insertBefore.length) {
+        let elements = El.unwrapFlatten(...insertBefore);
+        this.element.before(...elements);
+        return this;
+    }
+
     return El.wrap(this.element.previousElementSibling);
 };
 
-El.ElWrapper.prototype.next = function() {
+El.ElWrapper.prototype.next = function(...insertAfter) {
+    if (insertAfter && insertAfter.length) {
+        let elements = El.unwrapFlatten(...insertAfter);
+        this.element.after(...elements);
+        return this;
+    } 
+    
     return El.wrap(this.element.nextElementSibling);
+};
+
+El.ElWrapper.prototype.up = function(selector) {
+    if (selector) {
+        return El.wrap(this.element.closest(selector));
+    }
+
+    return El.wrap(this.element.parentElement);    
 };
 
 El.ElWrapper.prototype.with = function(callback, ...args) {

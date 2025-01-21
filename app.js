@@ -522,8 +522,7 @@ function elDepartureSection(d) {
                 }
                 departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     Storage.moveFirst(d.id);
-                    El.byId('noDepartures').unwrap()
-                        .insertAdjacentElement('afterend', el.unwrap());
+                    El.byId('noDepartures').next(el);
                     return el;
                 }).then(el => {
                     window.scrollTo(0,0);
@@ -544,12 +543,12 @@ function elDepartureSection(d) {
                 const bottomEl = El.one('#newDepartureButtons, #newDepartureForm');
                 departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
                     Storage.moveLast(d.id);
-                    el.unwrap().parentElement.insertBefore(el.unwrap(), bottomEl.unwrap());
+                    bottomEl.prev(el);
                     return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
                 });
             },
             hideIf: function(buttonEl) {
-                const departureEl = El.wrap(buttonEl.unwrap().closest('.departure'));
+                const departureEl = buttonEl.up('.departure');
                 const atBottom = departureEl.next().id() === 'newDepartureButtons'
                           || departureEl.next().id() === 'newDepartureForm';
 
