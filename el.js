@@ -72,6 +72,23 @@ El.ElWrapper = function(element) {
     this.element = element;
 };
 
+El.ElWrapper.prototype.unwrap = function() {
+    return this.element;
+};
+
+El.unwrap = function(el) {
+    return el instanceof El.ElWrapper ? el.unwrap() : el;
+};
+
+El.unwrapFlatten = function(...elements) {
+    return elements.flatMap(elt => {
+        if (Array.isArray(elt)) {
+            return elt.map(El.unwrap).filter(e => e);
+        }
+        return elt ? El.unwrap(elt) : [];
+    });
+};
+
 El.ElWrapper.prototype.hasClass = function(className) {
     return this.element.classList.contains(className);
 };
@@ -139,42 +156,29 @@ El.ElWrapper.prototype.html = function(htmlContent) {
     return this;
 };
 
-El.ElWrapper.prototype.empty = function() {
-    while (this.element.firstChild) {
-        this.element.removeChild(this.element.lastChild);
-    }
+El.ElWrapper.prototype.append = function(...content) {
+    let elements = El.unwrapFlatten(...content);
+    this.element.append(...elements);
     return this;
 };
 
-El.ElWrapper.prototype.append = function(...content) {
-    for (let elt of content) {
-        if (Array.isArray(elt)) {
-            this.append(...elt);
-            continue;
-        }
-        if (elt instanceof El.ElWrapper) {
-            elt = elt.unwrap();
-        }
-        if (elt) {
-            this.element.append(elt);
-        }
-    }
+El.ElWrapper.prototype.setChildren = function(...content) {
+    let elements = El.unwrapFlatten(...content);
+    this.element.replaceChildren(...elements);
     return this;
 };
+El.ElWrapper.prototype.empty = function() {
+    this.setChildren();
+    return this;
+}
 
 El.ElWrapper.prototype.replaceWith = function(otherElement) {
-    if (otherElement instanceof El.ElWrapper) {
-        otherElement = otherElement.unwrap();
-    }
-    this.element.replaceWith(otherElement);
+    this.element.replaceWith(El.unwrap(otherElement));
     return this;
 };
 
 El.ElWrapper.prototype.replace = function(otherElement) {
-    if (otherElement instanceof El.ElWrapper) {
-        otherElement = otherElement.unwrap();
-    }
-    otherElement.replaceWith(this.element);
+    El.unwrap(otherElement).replaceWith(this.element);
     return this;
 };
 
@@ -315,10 +319,6 @@ El.ElWrapper.prototype.next = function() {
     return El.wrap(this.element.nextElementSibling);
 };
 
-El.ElWrapper.prototype.unwrap = function() {
-    return this.element;
-};
-
 El.ElWrapper.prototype.with = function(callback, ...args) {
     return callback.apply(this.element, this.element, ...args);
 };
@@ -383,9 +383,7 @@ El.byId = function(id) {
 };
 
 El.one = function(selector, context) {
-    if (context instanceof El.ElWrapper) {
-        context = context.unwrap();
-    }
+    context = El.unwrap(context);
     if (!context) {
         context = document;
     }
@@ -398,9 +396,7 @@ El.none = function(selector, context) {
 };
 
 El.each = function(selector, callback, context) {
-    if (context instanceof El.ElWrapper) {
-        context = context.unwrap();
-    }
+    context = El.unwrap(context);
     if (!context) {
         context = document;
     }
