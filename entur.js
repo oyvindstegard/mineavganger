@@ -7,7 +7,7 @@
 'use strict';
 
 /* Generic throttled async function dispatch. Typical use case would be
-   to throttle AJAX requests. Function calls are processed in FIFO order.
+   to throttle fetch requests. Function calls are processed in FIFO order.
 
    maxConcurrency: max number of concurrently dispatched async operations.
    delayMillis: milliseconds to delay if concurrency is at max when new function
@@ -26,23 +26,23 @@ const ThrottledDispatcher = function(maxConcurrency, delayMillis) {
             clearTimeout(delayTimer);
         }
         while (queue.length > 0 && inFlight < self.maxConcurrency) {
-            const dispatch = queue.shift();
+            const {func, resolve, reject} = queue.shift();
             ++inFlight;
-            dispatch.func()
-                .then(dispatch.deferred.resolve)
-                .catch(dispatch.deferred.reject)
-                .then(function() { --inFlight; });
+            func()
+                .then(resolve)
+                .catch(reject)
+                .finally(() => { --inFlight; });
         }
         delayTimer = queue.length > 0 ? setTimeout(processQueue, self.delayMillis) : null;
     };
 
     /* Enqueues an async function execution, possibly delaying it if too many
-       concurrent calls are in flight. Returns a promise. */
+       concurrent calls are in flight. Returns a Promise. */
     this.enqueue = function(asyncFunc) {
-        const deferred = $.Deferred();
-        queue.push({func: asyncFunc, deferred: deferred});
-        processQueue();
-        return deferred.promise();
+        return new Promise((resolve, reject) => {
+            queue.push({func: asyncFunc, resolve, reject});
+            processQueue();
+        });
     };
 };
 
@@ -84,16 +84,23 @@ const Entur = new function() {
         'rail': new TransportMode('rail', 'tog', 'stasjon', '&#x1F686;')
     };
 
-    // Make trips query limited by 'from', 'to' and a single mode of transportation
+    this.tripQueryDefaults = {
+        'numTripPatterns': 3,
+        'searchWindow': 360,
+    };
+
+    // Makes a trip GraphQL query limited by 'from', 'to' and a single mode of transportation.
     // Returns an object with keys 'query' and 'variables'.
-    this.graphqlQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns) {
+    this.makeTripQuery = function (fromPlaceId, toPlaceId, mode, numTripPatterns, searchWindow) {
         return {
-            query: `query trips($from: Location!, $to: Location!, $numTripPatterns: Int = 3, $mode: TransportMode)
+            query: `query trips($from: Location!, $to: Location!, $mode: TransportMode,
+                                $numTripPatterns: Int!, $searchWindow: Int!)
                 {
-                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: 360)
+                  trip(from: $from, to: $to, numTripPatterns: $numTripPatterns, modes: {transportModes: {transportMode: $mode }}, maximumTransfers: 1, searchWindow: $searchWindow)
                   {
                     tripPatterns {
                       legs {
+                        id
                         authority {
                           name
                         }
@@ -123,6 +130,7 @@ const Entur = new function() {
                           }
                         }
                         situations {
+                          id
                           summary {
                             value
                             language
@@ -130,10 +138,6 @@ const Entur = new function() {
                           description {
                             value
                             language
-                          }
-                          validityPeriod {
-                            startTime
-                            endTime
                           }
                         }
                         mode
@@ -149,7 +153,10 @@ const Entur = new function() {
                     place: toPlaceId
                 },
                 mode: mode ? mode : null,
-                numTripPatterns: (numTripPatterns ? numTripPatterns : null)
+                numTripPatterns: (numTripPatterns ?
+                                  numTripPatterns : this.tripQueryDefaults.numTripPatterns),
+                searchWindow: (searchWindow ?
+                               searchWindow : this.tripQueryDefaults.searchWindow)
             }
         };
     };
@@ -159,7 +166,7 @@ const Entur = new function() {
                              window.location.hostname.replace(/[.-]/g, '_') : 'unknown');
     };
 
-    const throttledDispatcher = new ThrottledDispatcher(1, 100);
+    const throttledDispatcher = new ThrottledDispatcher(1, 50);
 
     /* Post to JourneyPlanner API: GraphQL payload wrapped in JSON container.
        This function throttles number of concurrent requests to avoid request
@@ -167,81 +174,71 @@ const Entur = new function() {
        A single retry with backoff is also part of this function.
     */
     this.fetchJourneyPlannerResults = function(graphqlQuery) {
-        const request = function() {
-            return $.post({
-                url: journeyPlannerApi,
-                data: JSON.stringify(graphqlQuery),
-                dataType: 'json',
-                contentType: 'application/json',
-                headers: { 'ET-Client-Name': getEnturClientName() },
+        const requestFunc = () => {
+            const request = new Request(journeyPlannerApi, {
+                body: JSON.stringify(graphqlQuery),
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-type': 'application/json',
+                    'Accept': 'application/json',
+                    'ET-Client-Name': getEnturClientName()
+                }
+            });
+
+            return fetch(request).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+
+                return response.json();
             });
         };
-
-        return throttledDispatcher.enqueue(request)
+        
+        return throttledDispatcher.enqueue(requestFunc)
             .catch(function(err) {
-                console.log(`Warning: journey planner request failed: ${err}`);
+                console.error(`JourneyPlanner request failed: ${err}`);
                 // Back off 5 secs and retry once
-                return new Promise(function(resolve, reject) {
+                return new Promise((resolve, reject) => {
                     setTimeout(resolve, 5000);
-                }).then(function() {
-                    return throttledDispatcher.enqueue(request);
-                });
+                }).then(() => throttledDispatcher.enqueue(requestFunc));
             });
     };
 
-    /* Geocoder autocomplete for stops.
-       Results are simplified to only contain list of labels and stop ids
-    */
-    this.fetchGeocoderResults = function(text, successCallback, transportMode, countyIds) {
+    /*
+     * Fetch geocoder suggestions.
+     * Returns a Promise which resolves to a JSON object on success.
+     */
+    this.fetchGeocoderResults = async function(text, transportMode, abortSignal) {
+        const countyIds = defaultGeocoderCountyIds;
 
-        const params = self.getGeocoderAutocompleteApiParams(transportMode, countyIds);
-        params.text = text;
-        
-        return $.get({
-            url: geocoderAutocompleteApi,
-            data: params,
-            headers: self.getGeocoderAutocompleteApiHeaders(),
-            success: function(data) {
-                successCallback(data.features.map(function(feature) {
-                    return {
-                        'label': feature.properties.label,
-                        'stopPlaceId': feature.properties.id
-                    };
-                }));
+        const url = new URL(geocoderAutocompleteApi);
+        url.searchParams.set('boundary.county_ids', countyIds.join(','));
+        url.searchParams.set('size', 20);
+        url.searchParams.set('layers', 'venue');
+        url.searchParams.set('categories', transportModeGeocoderCategories[transportMode].join(','));
+        url.searchParams.set('text', text);
+
+        const request = new Request(url, {
+            method: 'GET',
+            mode: 'cors',
+            signal: abortSignal,
+            headers: {
+                'Accept': 'application/json',
+                'ET-Client-Name': getEnturClientName()
             }
         });
-    };
 
-    this.getGeocoderAutocompleteApiUrl = function() {
-        return geocoderAutocompleteApi;
-    };
-
-    this.getGeocoderAutocompleteApiQueryParamName = function() {
-        return 'text';
-    };
-
-    /* Returns object with jQuery AJAX settings for a geocoder request */
-    this.getGeocoderAutocompleteApiParams = function(transportMode, countyIds) {
-        if (!countyIds) {
-            countyIds = defaultGeocoderCountyIds;
+        const response = await fetch(request);
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
         }
-        return {
-            'boundary.county_ids': countyIds.join(','),
-            'size': 20,
-            'layers': 'venue',
-            'categories': transportModeGeocoderCategories[transportMode].join(',')
-        };
+
+        return response.json();
     };
 
-    /* Returns required http-headers for geocoder API calls */
-    this.getGeocoderAutocompleteApiHeaders = function() {
-        return {
-            'ET-Client-Name': getEnturClientName()
-        };
-    };
-    
 };
 
 /* Local Variables: */
-/* js2-additional-externs: ("$") */
+/* js2-additional-externs: ("Request" "URL") */
 /* End: */

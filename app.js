@@ -1,84 +1,23 @@
 /**********************************************************************************
  * JavaScript/HTML 5 web app for personalized display of departures using Entur
- * JourneyPlanner API. The code currently relies on jQuery. It also uses some
- * raw ES6 features, which limits browser support to modern stuff.
+ * JourneyPlanner API. The code uses ES6 features, which limits browser support
+ * to modern stuff.
  * 
  * Author: Øyvind Stegard <oyvind@stegard.net>
  * License: GPL-3
- *
- * Code uses the following libraries, which are all MIT-licensed:
- * - jQuery, https://jquery.com/
- * - Ajax AutoComplete for jQuery,
- *   https://github.com/devbridge/jQuery-Autocomplete
  **********************************************************************************
  */
 
 'use strict';
 
-/* Expected globals:
-   - Entur: instance of Entur API functions
-   - Storage: instance of Storage API
-   - Bootstrap: Bootstrap object from bootstrap.js
+/* Expected globals in browser runtime:
+   - El: tiny DOM element library (replaces jQuery)
+   - Entur: the 'Entur' singleton object with Entur API methods.
+   - Storage: the 'Storage' singleton object of Storage API.
+   - Bootstrap: the 'Bootstrap' singleton object from bootstrap.js.
 */
 
-const animDuration = 100; // general duration of any animated effect in UI, in ms
-
-/* Entur Geocoder autocomplete using jQuery autocomplete plugin. */
-const GeocoderAutocomplete = function(inputElement, transportMode, Entur, onSelect, onInvalidate) {
-
-    const autocomplete = inputElement.autocomplete({
-        serviceUrl: Entur.getGeocoderAutocompleteApiUrl(),
-        paramName: Entur.getGeocoderAutocompleteApiQueryParamName(),
-        params: Entur.getGeocoderAutocompleteApiParams(transportMode),
-        ajaxSettings: {
-            dataType: 'json',
-            headers: Entur.getGeocoderAutocompleteApiHeaders()
-        },
-        onSelect: onSelect,
-        onInvalidateSelection: onInvalidate,
-        minChars: 2,
-        transformResult: function(response, originalQuery) {
-            const suggestions = response.features.map(function(feature) {
-                return {
-                    'value': feature.properties.label,
-                    'data': feature.properties.id
-                };
-            });
-            return {
-                suggestions: suggestions
-            };
-        }
-    }).autocomplete();
-
-    this.dispose = function() {
-        autocomplete.dispose();
-    };
-    
-};
-
-const ViewportUtils = {
-    /* Ensure that bottom of an element is completely visible in viewport,
-     * scroll if necessary. */
-    ensureLowerVisibility: function(element, delay) {
-        if (delay) {
-            setTimeout(function() {
-                ViewportUtils.ensureLowerVisibility(element);
-            }, delay);
-            return;
-        }
-        
-        const viewportLower = $(window).scrollTop() + $(window).height();
-        const elementLower = $(element).offset().top + $(element).outerHeight();
-        const pixelsBelow = elementLower - viewportLower;
-        if (pixelsBelow > -10) {
-            window.scrollBy(0, pixelsBelow + 10);
-        }
-    },
-    
-    scrollToTop: function() {
-        window.scroll(0,0);
-    }
-};
+const defaultFadeTimeoutMilliseconds = 300;
 
 /**
  * Attaches touch event handlers to window and invokes
@@ -110,28 +49,31 @@ const WindowSwipeDownFromTopHandler = function(callback) {
     };
 };
 
+String.prototype.stripAfterComma = function() {
+    return this.replace(/,[^,]*$/,'');
+};
 
 /**
- * @returns a jQuery-wrapped heading element for the departure
+ * @returns an El-wrapped heading element for the departure.
  */
-function getDepartureHeading(departure) {
+function elDepartureHeading(departure) {
     let title = '';
     if (departure.placeFrom && departure.placeFrom.name) {
-        title = 'fra ' + departure.placeFrom.name.replace(/,.*$/,'');
+        title = 'fra ' + departure.placeFrom.name.stripAfterComma();
     }
     if (departure.placeTo && departure.placeTo.name) {
         if (!title) {
             title = '...';
         }
-        title += ' til ' + departure.placeTo.name.replace(/,.*$/,'');
+        title += ' til ' + departure.placeTo.name.stripAfterComma();
     }
     if (!title) {
         title = 'Ny avgang med ' +  Entur.transportModes[departure.mode].name();
     } else {
         title = Entur.transportModes[departure.mode].name(true) + ' ' + title;
     }
-    
-    return $('<h2/>', { class: 'departureHeading' }).text(title);
+
+    return El('h2.departureHeading').text(title);
 }
 
 /* Departure input form support. */
@@ -139,39 +81,26 @@ const DepartureInput = new (function() {
 
     const self = this;
 
-    const getNewDepartureForm = function(transportMode, addCallback) {
+    const elNewDepartureForm = function(transportMode, addCallback) {
         const modeDesc = Entur.transportModes[transportMode];
 
-        // Stop place from
-        const placeFromInputLabel = $('<label/>', { for: 'placeFromInput' })
-                  .text('Fra ' + modeDesc.place());
-        const placeFromInvalid = $('<span/>', {id:'placeFromInvalid', class:'invalid'})
-                  .text('Ikke funnet.').hide();
-        const placeFromInput = $('<input/>', {
-            id: 'placeFromInput',
+        const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
+        const placeFromInput = El('input#placeFromInput', {
             type: 'text',
-            title: 'Fra ' + modeDesc.place(),
-            placeholder: 'Fra ' + modeDesc.place()
-        }).focus(function (ev) {
-            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
-        });
+            title: `Fra ${modeDesc.place()}`,
+            placeholder: `Fra ${modeDesc.place()}`
+        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
-        // Stop place to
-        const placeToInputLabel = $('<label/>', { for: 'placeToInput' })
-                  .text('Til ' + modeDesc.place());
-        const placeToInvalid = $('<span/>', {id:'placeToInvalid', class:'invalid'})
-                  .text('Ikke funnet.').hide();
-        const placeToInput = $('<input/>', {
-            id: 'placeToInput',
+        const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
+        const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
-        }).focus(function (ev) {
-            ViewportUtils.ensureLowerVisibility($('#departureSubmit'), 500);
-        });
+        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
-        const updateHeading = function() {
-            const heading = getDepartureHeading({
+        // New departure dynamic heading
+        const setFormHeading = function() {
+            const headingEl = elDepartureHeading({
                 placeFrom: {
                     name: placeFromInput.data('stopPlace')
                 },
@@ -179,89 +108,157 @@ const DepartureInput = new (function() {
                     name: placeToInput.data('stopPlace')
                 },
                 mode: transportMode
-            }).attr('id', 'newDepartureHeading');
-            $('#newDepartureHeading').replaceWith(heading);
+            }).id('newDepartureHeading');
+            
+            El.byId('newDepartureHeading').replaceWith(headingEl);
         };
 
-        const validateInputs = function(ev) {
+        // Form errors displayed to user
+        const formErrorInfo = El('p#formErrorInfo').hide();
+        const setFormError = function(messageHtml, append) {
+            if (messageHtml) {
+                const currentHtmlContents = formErrorInfo.html();
+                if (append && currentHtmlContents) {
+                    formErrorInfo.html(currentHtmlContents + '<br>' + messageHtml);
+                } else {
+                    formErrorInfo.html(messageHtml);
+                }
+                formErrorInfo.show();
+            } else {
+                formErrorInfo.hide().empty();
+            }
+        };
+
+        const checkTripsExist = async function (placeFromId, placeToId) {
+            try {
+                const result = await Entur.fetchJourneyPlannerResults(
+                    Entur.makeTripQuery(placeFromId, placeToId, transportMode, 1));
+
+                return result.data.trip.tripPatterns.length > 0;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        const maybeCheckTripsExist = function() {
+            const placeFrom = placeFromInput.data('stopPlace');
+            const placeFromId = placeFromInput.data('stopPlaceId');
+            const placeTo = placeToInput.data('stopPlace');
+            const placeToId = placeToInput.data('stopPlaceId');
+            if (placeFromId && placeToId) {
+                checkTripsExist(placeFromInput.data('stopPlaceId'),
+                                placeToInput.data('stopPlaceId'))
+                    .then(result => {
+                        if (result) {
+                            setFormError();
+                            El.byId('departureSubmit').text('Legg til');
+                            return;
+                        }
+
+                        if (placeFromId === placeFromInput.data('stopPlaceId')
+                            && placeToId === placeToInput.data('stopPlaceId')) {
+                            setFormError(
+                                `Fant ingen avganger med direkteforbindelse ${modeDesc.name()} fra
+                                 ${El.esc(placeFrom.stripAfterComma())} til
+                                 ${El.esc(placeTo.stripAfterComma())}.`);
+                            El.byId('departureSubmit').text('Legg til likevel');
+                        } else {
+                            setFormError();
+                            El.byId('departureSubmit').text('Legg til');
+                        }
+                    });
+            }
+        };
+        
+        const validateInputs = function(forSubmit) {
             let ok = true;
+            setFormError();
 
-            if (placeFromInput.val() !== placeFromInput.data('stopPlace')) {
-                placeFromInvalid.show();
-                placeFromInput.addClass('invalid');
-                ok = false;
-            } else {
-                placeFromInput.removeClass('invalid');
-                placeFromInvalid.hide();
-            }
-
-            if (placeToInput.val() !== placeToInput.data('stopPlace')) {
-                placeToInvalid.show();
-                placeToInput.addClass('invalid');
-                ok = false;
-            } else {
-                placeToInput.removeClass('invalid');
-                placeToInvalid.hide();
-            }
+            const fromVal = placeFromInput.val().trim();
+            const toVal = placeToInput.val().trim();
             
+            if (fromVal && fromVal !== placeFromInput.data('stopPlace')) {
+                setFormError(`Fra ${modeDesc.place()} «${El.esc(fromVal)}» er ukjent.`, true);
+                ok = false;
+            } else if (forSubmit && !fromVal) {
+                setFormError(`Mangler ${placeFromInput.unwrap().title}.`, true);
+                ok = false;
+            }
+
+            if (toVal && toVal !== placeToInput.data('stopPlace')) {
+                setFormError(`Til ${modeDesc.place()} «${El.esc(toVal)}» er ukjent.`, true);
+                ok = false;
+            } else if (forSubmit && !toVal) {
+                setFormError(`Mangler ${placeToInput.unwrap().title}.`, true);
+                ok = false;
+            }
+
+            if (ok && toVal && fromVal && placeFromInput.data('stopPlaceId')
+                && placeFromInput.data('stopPlaceId') === placeToInput.data('stopPlaceId')) {
+                setFormError('Fra og til kan ikke være samme stoppested.');
+                ok = false;
+            } 
+
+            if (ok && !forSubmit) {
+                maybeCheckTripsExist();
+            }
+
             return ok;
         };
         
-        const fromAutocomplete = new GeocoderAutocomplete(placeFromInput, transportMode, Entur, function(s) {
-            // 'this' is bound to element on which event occurs
-            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
-            
-            $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateHeading();
-
-            if (placeFromInput.val() && valueIsChanged) {
-                placeToInput.focus();
-            }
-        }, function(e) {
-            $(this).data('stopPlaceId', null).data('stopPlace', null);
-        });
-        const toAutocomplete = new GeocoderAutocomplete(placeToInput, transportMode, Entur, function(s) {
-            // 'this' is bound to element on which event occurs
-            let valueIsChanged = (s.value !== $(this).data('stopPlace'));
-            
-            $(this).data('stopPlaceId', s.data).data('stopPlace', s.value);
-            updateHeading();
-
-            if (placeToInput.val() && valueIsChanged) {
-                $('#departureSubmit').focus();
-            }
-        }, function() {
-            $(this).data('stopPlaceId', null).data('stopPlace', null);
-        });
+        const fromAutocomplete = new GeoComplete(
+            placeFromInput, transportMode,
+            function onSelect(id, label) {
+                // 'this' is bound to element on which event occurs
+                this.dataset['stopPlaceId'] = id;
+                this.dataset['stopPlace'] = label;
+                setFormHeading();
+                validateInputs();
+                if (! placeToInput.val()) {
+                    placeToInput.focus();
+                }
+            });
         
-        return $('<form/>', { 'id': 'newDepartureForm',
-                              'class': 'newDeparture',
-                              'autocomplete': 'off' }) // Disable native "history" auto-completion
-            .append(getDepartureHeading({
-                placeFrom: {},
-                placeTo: {},
-                mode: transportMode
-            }).attr('id', 'newDepartureHeading'))
-            .append($('<ul/>',{ class:'departureList' })
-                    .append($('<li/>').append(placeFromInput, placeFromInputLabel, placeFromInvalid),
-                            $('<li/>').append(placeToInput, placeToInputLabel, placeToInvalid)))
-            .append($('<button/>', {
-                text: 'Legg til',
-                id: 'departureSubmit',
-                type: 'submit',
-                click: validateInputs
-            }))
-            .append($('<button/>', {
-                type: 'button',
-                text: 'Avbryt',
-                click: function(ev) {
+        const toAutocomplete = new GeoComplete(
+            placeToInput.unwrap(), transportMode,
+            function onSelect(id, label) {
+                // 'this' is bound to element on which event occurs
+                this.dataset['stopPlaceId'] = id;
+                this.dataset['stopPlace'] = label;
+                setFormHeading();
+                if (validateInputs() && placeFromInput.val()) {
+                    El.byId('departureSubmit').focus();
+                }
+            });
+
+        return El('form.newDeparture#newDepartureForm', {autocomplete: 'off'})
+            .append(
+                elDepartureHeading({
+                    placeFrom: {},
+                    placeTo: {},
+                    mode: transportMode
+                }).id('newDepartureHeading'),
+
+                El('ul.departureList').append(
+                    El('li').append(placeFromInput, placeFromInputLabel),
+                    El('li').append(placeToInput, placeToInputLabel)
+                ),
+                
+                formErrorInfo,
+                
+                El('button#departureSubmit', {type: 'submit'}).text('Legg til'),
+                El('button', {type: 'button'}).text('Avbryt').click(ev => {
                     ev.preventDefault();
                     fromAutocomplete.dispose();
                     toAutocomplete.dispose();
-                    $('#newDepartureForm').replaceWith(self.getNewDepartureButtons(addCallback));
+                    El.byId('newDepartureForm')
+                        .replaceWith(self.elNewDepartureButtons(addCallback));
+                })
+            ).event('submit', ev => {
+                if (!validateInputs(true)) {
+                    ev.preventDefault();
+                    return;
                 }
-            }))
-            .submit(function(ev) {
                 fromAutocomplete.dispose();
                 toAutocomplete.dispose();
                 addCallback({
@@ -275,91 +272,106 @@ const DepartureInput = new (function() {
                     },
                     mode: transportMode
                 });
-                return true;
             });
     };
-    
-    this.getNewDepartureButtons = function(addCallback) {
-        return $('<section/>', {id: 'newDepartureButtons'}).append(
-            $.map(Entur.transportModes,
-                  function (modeDesc, transportMode) {
-                      const buttonText = '+' + modeDesc.name(true);
-                      return $('<button/>', {class:'newDeparture'}).text(buttonText)
-                          .click(function(e) {
-                              e.preventDefault();
-                              $('#newDepartureButtons').replaceWith(
-                                  getNewDepartureForm(transportMode, addCallback));
-                              $('#placeFromInput').focus();
-                          });
-                  }));
+
+    this.elNewDepartureButtons = function(addCallback) {
+        return El('section#newDepartureButtons')
+            .append(
+                Object.entries(Entur.transportModes).map(([modeKey, mode]) => {
+                    const buttonText = '+' + mode.name(true);
+                    return El('button.newDeparture').text(buttonText)
+                        .click(function(ev) {
+                            ev.preventDefault();
+                            El.byId('newDepartureButtons').replaceWith(
+                                elNewDepartureForm(modeKey, addCallback));
+                            El.byId('placeFromInput').focus();
+                        });
+                }));
     };
-    
 })();
 
-/* Dropdown menus support. */
+/* Mutually exclusive multiple dropdown menus support. */
 const DropdownMenu = new (function() {
 
     var globalCloseDropdownsHandlerRegistered = false;
     const registerGlobalCloseDropdownsHandler = function () {
         if (globalCloseDropdownsHandlerRegistered) {
             return;
-        } else {
-            globalCloseDropdownsHandlerRegistered = true;
         }
-        $(window).click(function (ev) {
-            $('div.Dropdown__menu').each(function (idx, e) { $(e).fadeOut(animDuration); });
-        });
+
+        globalCloseDropdownsHandlerRegistered = true;
+
+        window.addEventListener('click', () => El.each('div.Dropdown__menu', el => el.fadeOut()));
     };
 
     var idSequence = 0;
 
     /* Create a new dropdown menu with a button and custom actions. */
-    this.newDropdownMenu = function(title, actions) {
+    this.elDropdownMenu = function(title, actions) {
         registerGlobalCloseDropdownsHandler();
 
         const nextId = ++idSequence;
 
-        return $('<div/>', { class: 'Dropdown__container',
-                            id: 'Dropdown__container-' + nextId })
-            .append($('<button/>', { class: 'Dropdown__button',
-                                     id: 'Dropdown__button-' + nextId,
-                                     title: title })
-                    .append($('<img/>', { src: 'menu.svg?_V=' + Bootstrap.V,
-                                          width: '16',
-                                          height: '16',
-                                          alt: 'Meny-symbol' }))
-                    .click(function(ev) {
+        const menuId = 'Dropdown__menu-' + nextId;
+
+        const dropdownContainerId = 'Dropdown__container-' + nextId;
+
+        return El('div.Dropdown__container#' + dropdownContainerId)
+            .append(
+                El('button.Dropdown__button#Dropdown__button-' + nextId, { title })
+                    .append(
+                        El('img', {
+                            src: 'menu.svg?_V=' + Bootstrap.V,
+                            width: '16', height: '16',
+                            alt: 'Meny-symbol'
+                        }))
+                    .click(ev => {
                         ev.preventDefault();
                         ev.stopPropagation();
-                        const thisMenuId = 'Dropdown__menu-' + nextId;
-                        $('.Dropdown__menu').each(function(idx, e) {
-                            if (e.id === thisMenuId) {
-                                if ($(e).is(':visible')) {
-                                    $(e).fadeOut(animDuration);
+                        
+                        El.each('.Dropdown__menu', el => {
+                            if (el.id() === menuId) {
+                                if (!el.isHidden()) {
+                                    el.fadeOut();
                                 } else {
-                                    $(e).fadeIn(animDuration, function() {
-                                        ViewportUtils.ensureLowerVisibility(e);
-                                    });
+                                    El.each('button.Dropdown__item', buttonEl => {
+                                        const action = actions.find(
+                                            a => a.label === buttonEl.data('label'));
+
+                                        if (!action.hideIf) return;
+
+                                        if (action.hideIf(buttonEl)) {
+                                            buttonEl.hide();
+                                        } else {
+                                            buttonEl.show();
+                                        }
+                                    }, el);
+                                    
+                                    el.fadeIn('block').then(el => el.scrollTo());
                                 }
                             } else {
-                                $(e).fadeOut(animDuration);
+                                el.fadeOut();
                             }
                         });
-                    })
-                   )
-            .append($('<div/>', {class: 'Dropdown__menu Dropdown__menuborder',
-                                 id: 'Dropdown__menu-' + nextId}
-                     ).append($.map(actions, function(val, key) {
-                         return $('<button/>', { class: 'Dropdown__item' })
-                             .html(key)
-                             .click(function(e) {
-                                 let element = this;
-                                 $('#Dropdown__menu-' + nextId).fadeOut(animDuration, function() {
-                                     val.call(element, e);
-                                 });
-                             });
-                    }))
-                   );
+                    }),
+
+                El('div.Dropdown__menu.Dropdown__menuborder#' + menuId)
+                    .hide()
+                    .append(
+                        actions.map(({label, handler}) => 
+                                    El('button.Dropdown__item')
+                                    .html(label)
+                                    .data('label', label)
+                                    .click(ev => {
+                                        ev.preventDefault();
+                                        ev.stopPropagation();
+                                        El.byId(menuId).fadeOut()
+                                            .then(el => handler.call(ev.target, ev));
+                                    })
+                                   ),
+                    )
+            );
     };
 })();
 
@@ -377,36 +389,29 @@ Date.prototype.hhmm = function() {
     return hours + ':' + mins;
 };
 
-function getPlatformElement(trip) {
+function elPlatformElement(trip) {
     return (trip.legs[0].fromEstimatedCall.quay &&
             trip.legs[0].fromEstimatedCall.quay.publicCode) ?
-        $('<span/>', {
-            'class': 'platformCode',
-            'html': trip.legs[0].fromEstimatedCall.quay.publicCode,
+        El('span.platformCode', {
             'title': 'Plattform ' + trip.legs[0].fromEstimatedCall.quay.publicCode
-        })
+        }).html(trip.legs[0].fromEstimatedCall.quay.publicCode)
         :
-        $('<span/>');
+        El('span');
 }
-function getLineCodeElement(trip) {
+
+function elLineCodeElement(trip) {
     const name = trip.legs[0].fromEstimatedCall.destinationDisplay.frontText;
     const publicCode = trip.legs[0].line.publicCode;
     const bgcolor = trip.legs[0].line.presentation.colour || '888';
     const fgcolor = trip.legs[0].line.presentation.textColour || 'FFF';
 
-    return $('<span/>', {
-        'class': 'lineCode',
-        'html': publicCode
-    }).css({'color':'#'+fgcolor,'background-color':'#' + bgcolor}).prop('title', name);
+    return El('span.lineCode', {
+        title: name,
+        style: `color: #${fgcolor}; background-color: #${bgcolor};`
+    }).html(publicCode);
 }
-function getSituationSymbolElement(trip) {
-    if (trip.legs[0].situations && trip.legs[0].situations.length) {
-        return $('<span/>', {
-            'html': '&#x26a0;&#xfe0f;'
-        });
-    }
-}
-function getTimeElements(trip, displayMinutesToStart) {
+
+function elTimeElements(trip, displayMinutesToStart) {
     const now = new Date();
     const startTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.expectedDepartureTime);
     const aimedTime = Date.parseIsoCompatible(trip.legs[0].fromEstimatedCall.aimedDepartureTime);
@@ -421,50 +426,47 @@ function getTimeElements(trip, displayMinutesToStart) {
         minutesToStart = 'over én time';
     }
 
-    return $('<span/>', {
-        'class': 'startTime',
-        'html': (minutesDelayed > 0 ? '<strike>'+aimedTime.hhmm()+'</strike><span class="startTimeDelayed">' + startTime.hhmm() + '</span>' : startTime.hhmm())
-            + (displayMinutesToStart ? ' (' + minutesToStart + ')' : '')
-    });
+    return El('span.startTime').html(
+        (minutesDelayed > 0 ?
+         `<strike>${aimedTime.hhmm()}</strike><span class="startTimeDelayed">${startTime.hhmm()}</span>` : startTime.hhmm())
+            + (displayMinutesToStart ? ` (${minutesToStart})` : ''));
 }
 
 /**
  * Collect and transform list of unique situation objects from a set of trip patterns.
  * Each object in returned list has shape:
  *  {
- *    "summary": ""<Summary of situation in Norwegian>"",
- *    "description": "<Description of situation in Norwegian>",
- *    "validityPeriod": {
- *      "startTime": "<timestamp>",
- *      "endTime": "<timestamp>"
- *    }
+ *    "id":            "<opaque situation identifier string>",
+ *    "n":             <n-th collected situation, starting from 1>,
+ *    "summary":       "<Summary of situation in Norwegian>",
+ *    "description":   "<Description of situation in Norwegian>"
+ *    "appliesTo":     [Array of trip/leg-id strings]
  *  }
  *  @returns {Array} list of unique situation objects
  */
 function collectSituations(tripPatterns) {
     const situations = [];
+    let n = 1;
     
-    tripPatterns.forEach(function(tripPattern) {
-        tripPattern.legs.forEach(function(leg) {
-            leg.situations.forEach(function(situation) {
-                const description = situation.description.find(function(description) {
-                    return description.language === 'no';
-                });
-                const summary = situation.summary.find(function(summary) {
-                    return summary.language === 'no';
-                });
+    tripPatterns.forEach(tripPattern => {
+        tripPattern.legs.forEach(leg => {
+            leg.situations.forEach(situation => {
+                const alreadyCollected = situations.find(s => s.id === situation.id);
+                if (alreadyCollected) {
+                    alreadyCollected.appliesTo.push(leg.id);
+                    return;
+                }
+
+                const description = situation.description.find(desc => desc.language === 'no');
+                const summary = situation.summary.find(s => s.language === 'no');
+
                 if (summary && description) {
-                    if (situations.find(function(s) {
-                        return s.summary === summary.value &&
-                            s.description === description.value;
-                    })) {
-                        return;
-                    }
-                    
                     situations.push({
+                        id: situation.id,
+                        n: n++,
                         summary: summary.value,
                         description: description.value,
-                        validityPeriod: situation.validityPeriod
+                        appliesTo: [leg.id]
                     });
                 }
             });
@@ -474,28 +476,130 @@ function collectSituations(tripPatterns) {
     return situations;
 }
 
-/**
- * Generate a list of situation items from list of situation objects as returned by
- * {@link collectSituations}.
- */
-function getSituationListItem(situation) {
-    return $('<li/>', { class: 'situation' })
-        .html('&#x26a0;&#xfe0f; ' + situation.summary + ' ')
-        .append($('<a/>', {href:'#'})
-                .text('Vis mer')
-                .click(function(ev) {
-                    ev.preventDefault();
-                    $(this).parent().replaceWith(
-                        $('<li/>', { class: 'situation__expanded' })
-                            .html('&#x26a0;&#xfe0f; ' + situation.description)
-                        
-                    );
-                })
-               );
+function elSituationSymbolElement(trip, collectedSituations, showSituationNumbers) {
+    const leg = trip.legs[0];
+    const appliesToTrip = collectedSituations.filter(s => s.appliesTo.indexOf(leg.id) > -1);
+    if (appliesToTrip.length) {
+        return El('span').html('&#x26a0;&#xfe0f;').append(
+            showSituationNumbers ?
+                El('span.situationNumber')
+                .css('font-size', '90%')
+                .html('&nbsp;' + appliesToTrip.map(s => s.n).join(',&nbsp;')) : null);
+    }
+    return null;
 }
 
-function getDepartureSection(d) {
-    return $('<section/>', {id: 'departure-' + d.id, class: 'departure'})
+/**
+ * Render a situation list item for a situation object as returned by
+ * {@link collectSituations}.
+ */
+function elSituationListItem(situation, showSituationNumber) {
+    const situationNumberHtml = `${situation.n}.&nbsp;`;
+    return El('li.situation').html('&#x26a0;&#xfe0f; '
+                                   + (showSituationNumber ? situationNumberHtml : '')
+                                   + situation.summary + ' ')
+        .append(El('a', {href: '#'})
+                .text('Vis mer')
+                .click(ev => {
+                    ev.preventDefault();
+                    postponeUpdate(20);
+                    El('li.situation__expanded')
+                        .html('&#x26a0;&#xfe0f; ' +
+                              (showSituationNumber ? situationNumberHtml : '')
+                              + situation.description)
+                        .replace(ev.target.parentElement);
+                }));
+}
+
+function elDepartureSection(d) {
+    const departureId = 'departure-' + d.id;
+    
+    const menuActions = [
+        {
+            label: 'Snu',
+            handler: function(ev) {
+                const reversed = reverseDepartureInStorage(d.id);
+                El.byId(departureId).replaceWith(elDepartureSection(reversed));
+                updateDeparture(El.byId(departureId));
+            }
+        },
+        {
+            label: 'Færre',
+            handler: function(ev) {
+                setDepartureElementNumTrips(El.byId(departureId), 3);
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId(departureId);
+                return departureEl.data('numTrips') === '3';
+            }
+        },
+        {
+            label: 'Flere',
+            handler: function(ev) {
+                setDepartureElementNumTrips(El.byId(departureId), 6);
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId(departureId);
+                return departureEl.data('numTrips') === '6';
+            }
+        },
+        {
+            label: 'Topp',
+            handler: function(ev) {
+                const departureEl = El.byId(departureId);
+                if (departureEl.prev().id() === 'noDepartures') {
+                    return;
+                }
+                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                    Storage.moveFirst(d.id);
+                    El.byId('noDepartures').next(el);
+                    return el;
+                }).then(el => {
+                    window.scrollTo(0,0);
+                    return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                });
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = El.byId(departureId);
+                const atTop = departureEl.prev().id() === 'noDepartures';
+
+                return atTop;
+            }
+        },
+        {
+            label: 'Bunn',
+            handler: function(ev) {
+                const departureEl = El.byId(departureId);
+                const bottomEl = El.one('#newDepartureButtons, #newDepartureForm');
+                departureEl.fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                    Storage.moveLast(d.id);
+                    bottomEl.prev(el);
+                    return el.fadeIn(null, defaultFadeTimeoutMilliseconds);
+                });
+            },
+            hideIf: function(buttonEl) {
+                const departureEl = buttonEl.up('.departure');
+                const atBottom = departureEl.next().id() === 'newDepartureButtons'
+                          || departureEl.next().id() === 'newDepartureForm';
+
+                return atBottom;
+            }
+        },
+        {
+            label: 'Slett',
+            handler: function(ev) {
+                Storage.removeDeparture(d.id);
+                El.byId(departureId).fadeOut(defaultFadeTimeoutMilliseconds).then(el => {
+                    el.remove();
+                    if (El.none('section.departure')) {
+                        El.byId('noDepartures').show();
+                    }
+                });
+            }
+        }
+    ];
+
+    return El('section.departure#departure-' + d.id)
         .data('id', d.id)
         .data('placeFromId', d.placeFrom.stopId)
         .data('placeFromName', d.placeFrom.name)
@@ -503,65 +607,44 @@ function getDepartureSection(d) {
         .data('placeToName', d.placeTo.name)
         .data('mode', d.mode)
         .data('numTrips', d.numTrips || 3)
-        .append(getDepartureHeading(d))
-        .append(DropdownMenu.newDropdownMenu('Meny for avgang', {
-            'Snu': function(ev) {
-                const reversed = reverseDepartureInStorage(d.id);
-                $('#departure-' + d.id).replaceWith(getDepartureSection(reversed));
-                updateDeparture($('#departure-' + d.id));
-            },
-            '&#x2b; / &#x2212;': function(ev) {
-                showMoreOrLess($('#departure-' + d.id));
-            },
-            'Topp': function(ev) {
-                Storage.moveFirst(d.id);
-                $('#departure-' + d.id).detach().insertAfter($('#noDepartures'));
-                ViewportUtils.scrollToTop();
-            },
-            'Bunn': function(ev) {
-                Storage.moveLast(d.id);
-                const element = $('#departure-' + d.id)
-                                 .detach()
-                                 .insertBefore($('#newDepartureButtons'))[0];
-                ViewportUtils.ensureLowerVisibility(element);
-            },
-            'Slett': function(ev) {
-                ev.preventDefault();
-                Storage.removeDeparture(d.id);
-                $('#departure-' + d.id).remove();
-                if (!$('section.departure').length) {
-                    $('#noDepartures').show();
-                }
-            }
-        }))
-        .append($('<ul/>', {class:'departureList'}),
-                $('<ul/>', {class:'situationList'}));
+        .append(
+            elDepartureHeading(d),
+            DropdownMenu.elDropdownMenu('Meny for avgang', menuActions),
+            El('ul.departureList'),
+            El('ul.situationList')
+        );
 }
 
-function showDepartureLoader(el) {
-    const contentHeight = Math.max(32, $(el).height()) + 'px';
-    const loaderEl = $('<ul/>', {class:'departureList', height:contentHeight}).append(
-        $('<li/>').append($('<img/>', { src: 'logo.svg?_V=' + Bootstrap.V, class:'loader' })));
-    $(el).replaceWith(loaderEl);
+function elLoaderWithHeight(height) {
+    const loaderHeight = Math.max(32, height);
+    return El('div').css('display','block').css('height', loaderHeight + 'px').append(
+        El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V}));
 }
 
-function spinOnce(el) {
-    $(el).replaceWith($(el).clone().addClass('spinonce'));
+function departureListLoaderAnimation(departureListElement) {
+    const elementHeight = departureListElement.getBoundingClientRect().height;
+    const loaderHeight = Math.max(32, elementHeight);
+    El('ul.departureList', {style: `height: ${loaderHeight}px`}).append(
+        El('li').append(
+            El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V})))
+        .replace(departureListElement);
 }
 
-// Expects a departure section element as argument
-function showMoreOrLess(el) {
-    if (! (el instanceof jQuery)) {
-        el = $(el);
-    }
-    if (!el.data('numTrips') || el.data('numTrips') === 3) {
-        updateDeparture(el.data('numTrips', 6));
-    } else {
-        updateDeparture(el.data('numTrips', 3));
-    }
+function spinOnce(element) {
+    El.wrap(element)
+        .removeClass('spinonce')
+        .event('animationend', ev => ev.target.classList.remove('spinonce'), {once: true})
+        .addClass('spinonce');
+}
+
+function setDepartureElementNumTrips(element, numTrips) {
+    numTrips = numTrips ? numTrips : 3;
+    const el = El.wrap(element);
+    updateDeparture(el.data('numTrips', numTrips));
+    
     // Persist state
-    const d = Storage.getDeparture(el.data('id'));
-    d.numTrips = el.data('numTrips');
+    const d = Storage.getDeparture(parseInt(el.data('id')));
+    d.numTrips = parseInt(el.data('numTrips'));
     Storage.saveDeparture(d);
 }
 
@@ -573,71 +656,75 @@ function reverseDepartureInStorage(departureId) {
     return Storage.saveDeparture(departure);
 }
 
-function updateDeparture(el) {
-    if (! (el instanceof jQuery)) {
-        el = $(el);
-    }
-    if (el.data('loading')) {
+function updateDeparture(departureSection) {
+    const el = El.wrap(departureSection);
+
+    if (el.data('loading') === 'true') {
         return;
     } else {
-        el.data('loading', true);
+        el.data('loading', 'true');
     }
+
+    departureListLoaderAnimation(El.one('ul.departureList', el).unwrap());
+
+    const numTrips = el.data('numTrips') ? parseInt(el.data('numTrips')) : 3;
+    const mode = el.data('mode');
+    const placeFrom = el.data('placeFromId');
+    const placeFromName = el.data('placeFromName');
+    const placeTo = el.data('placeToId');
+    const placeToName = el.data('placeToName');
     
-    showDepartureLoader($('ul.departureList', el).get(0));
-
-    // Query criteria are attached to DOM as data-attributes
-    const data = el.data();
-    const numTrips = data.numTrips || 3;
-    const mode = data.mode;
-    const placeFrom = data.placeFromId;
-    const placeTo = data.placeToId;
-
-    Entur.fetchJourneyPlannerResults(Entur.graphqlQuery(placeFrom, placeTo, mode, numTrips))
-        .then(function(result) {
-            const listItems = $.map(result.data.trip.tripPatterns, function(trip, idx) {
-                return $('<li/>').append(getLineCodeElement(trip),
-                                         getTimeElements(trip, idx < 2),
-                                         getPlatformElement(trip),
-                                         getSituationSymbolElement(trip));
-            });
+    Entur.fetchJourneyPlannerResults(Entur.makeTripQuery(placeFrom, placeTo, mode, numTrips))
+        .then(result => {
+            const situations = collectSituations(result.data.trip.tripPatterns);
+            const showSituationNumbers = situations.length > 1;
             
-            if (!listItems.length) {
-                const modeDesc = Entur.transportModes[mode];
-                $('ul.departureList', el)
-                    .replaceWith($('<ul/>', { 'class': 'departureList' }).append(
-                        $('<li/>').text('Fant ingen avganger med '
-                                        + modeDesc.name()
-                                        + ' fra ' + data.placeFromName
-                                        + ' til ' + data.placeToName)
-                    ));
-                $('ul.situationList', el).remove();
-            } else {
-                const situationListItems =
-                      collectSituations(result.data.trip.tripPatterns).map(getSituationListItem);
+            const listItems = result.data.trip.tripPatterns.map((trip, idx) =>
+                El('li').append(
+                    elLineCodeElement(trip),
+                    elTimeElements(trip, idx < 2),
+                    elPlatformElement(trip),
+                    elSituationSymbolElement(trip, situations, showSituationNumbers)
+                ));
 
-                $('ul.departureList', el).replaceWith($('<ul/>', {class: 'departureList'}).append(listItems));
-                $('ul.situationList', el).replaceWith($('<ul/>', {class: 'situationList'}).append(situationListItems));
+            if (listItems.length) {
+                const situationListItems = situations.map(s => elSituationListItem(s, showSituationNumbers));
+                
+                El('ul.departureList').append(listItems).replace(El.one('ul.departureList', el));
+                El('ul.situationList').append(situationListItems).replace(El.one('ul.situationList', el));
+            } else { 
+               const modeDesc = Entur.transportModes[mode];
+                El.one('ul.departureList', el).replaceWith(
+                    El('ul.departureList').append(
+                        El('li').html(
+                            `Fant ingen avganger med direkteforbindelse ${modeDesc.name()}
+                             fra ${placeFromName} til ${placeToName}`
+                        )
+                    )
+                );
+                
+                El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
             }
-        }).catch(function(e) {
-            $('ul.departureList', el).replaceWith(
-                $('<ul/>', {class: 'departureList'})
-                    .append($('<li/>').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'))
-                    .append($('<li/>').html('<button>Forsøk på nytt</button>')
-                            .click(function(ev) {
-                                ev.preventDefault();
-                                updateDepartures(true);
-                            }))
-                    .append($('<li/>', {
-                        class:'technical',
-                        html: 'Feil: [' + data.placeFromId + '] &#x2192; [' +
-                            data.placeToId + ']: ' + e.statusText
-                    })));
-            $('ul.situationList', el).remove();
-        }).then(function() {
-            el.data('loading', false);
+        })
+        .catch((e) => {
+            El('ul.departureList').append(
+                El('li').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'),
+                El('li').append(
+                    El('button').text('Forsøk på nytt').click(ev => updateDepartures(true))
+                ),
+                El('li.technical').html(
+                    `Feil: [${placeFrom}] &#x2192; [${placeTo}]: ${e.message}`
+                )
+            ).replace(El.one('ul.departureList', el));
+
+            El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
+        })
+        .finally(() => {
+            el.data('loading', 'false');
         });
 }
 
+const updateIntervalSeconds = 60;
 var lastUpdate = null;
 var updateTimeout = null;
 var appUpdateAvailable = false;
@@ -648,45 +735,61 @@ function updateDepartures(userIntent) {
     }
 
     if (userIntent === true || lastUpdate === null
-        || (new Date().getTime() - lastUpdate.getTime()) >= 60000) {
-        spinOnce($('#logospinner'));
+        || (new Date().getTime() - lastUpdate.getTime()) >= updateIntervalSeconds*1000) {
+        spinOnce(El.byId('logospinner').unwrap());
 
-        $('main section.departure').each(function(idx, el) {
-            updateDeparture(el);
-        });
+        El.each('main section.departure', updateDeparture);
 
         lastUpdate = new Date();
-        $('#last-updated-info').text(lastUpdate.hhmm());
+        El.byId('last-updated-info').text(lastUpdate.hhmm());
 
         if (appUpdateAvailable) {
-            $('#appUpdate').show();
+            El.byId('appUpdate').show();
+        }
+        if (El.none('main section.departure')) {
+            El.byId('noDepartures').show();
+        } else {
+            El.byId('noDepartures').hide();
         }
     }
 
-    updateTimeout = setTimeout(updateDepartures, 60000);
+    updateTimeout = setTimeout(updateDepartures, updateIntervalSeconds*1000);
+}
+
+function postponeUpdate(secondsToPostpone) {
+    if (updateTimeout) {
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
+    }
+
+    const nowSeconds = new Date().getTime() / 1000;
+    
+    const nextRegularUpdateInSeconds =
+              lastUpdate ? updateIntervalSeconds - (nowSeconds - lastUpdate.getTime()/1000) : 0;
+
+    const postponedUpdateInSeconds = Math.max(nextRegularUpdateInSeconds, 0) + secondsToPostpone;
+
+    const postponedTimeoutSeconds = Math.min(updateIntervalSeconds, postponedUpdateInSeconds);
+
+    updateTimeout = setTimeout(updateDepartures, postponedTimeoutSeconds*1000);
 }
 
 function renderApp() {
     const departures = Storage.getDepartures();
-    
-    const appContent = $('main').empty();
 
-    $('<section/>', {id:'appUpdate'}).append(
-        $('<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">klikk her for å oppdatere</a>.</p>')
-    ).appendTo(appContent);
+    const appContent = El('main');
 
-    $('<section/>', {id:'noDepartures'}).append(
-        $('<p>Ingen ruter er lagret.</p><p>Legg til nye ved å velge transporttype med knappene under.</p>')
-    ).appendTo(appContent);
-    if (departures.length === 0) {
-        $('#noDepartures').show();
-    }
+    El('section#appUpdate').html(
+        '<p>En ny app-versjon er tilgjengelig, <a href="javascript:window.location.reload()">trykk for å oppdatere</a>.</p>'
+    ).hide().appendTo(appContent);
 
-    departures.forEach(function (departure) {
-        getDepartureSection(departure).appendTo(appContent);
-    });
+    El('section#noDepartures').html(
+        '<p>Ingen avganger er lagret.</p><p>Legg til nye ved å velge transportmiddel med knappene under.</p>'
+    ).hide().appendTo(appContent);
 
-    const addCallback = function (newDep) {
+    departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
+
+    const addCallback = (newDep) => {
         Storage.saveDeparture({
             placeFrom: {
                 stopId: newDep.placeFrom.stopId,
@@ -702,24 +805,27 @@ function renderApp() {
         updateDepartures(true);
     };
 
-    DepartureInput.getNewDepartureButtons(addCallback).appendTo(appContent);
+    DepartureInput.elNewDepartureButtons(addCallback).appendTo(appContent);
+
+    El.one('main').replaceWith(appContent);
 }
 
 
-/* Application entry point, called after dependencies have been loaded and DOM
- * is ready. */
+/* Application entry point, called after script dependencies have been loaded. */
 function appInit() {
     renderApp();
-    updateDepartures(); 
-    $('header').click(function(ev) { updateDepartures(true); });
-    new WindowSwipeDownFromTopHandler(function() { updateDepartures(true); });
-    $(window).focus(function(ev) { setTimeout(updateDepartures, 500); });
 
-    Bootstrap.appUpdateAvailable.then(function() {
-        appUpdateAvailable = true;
-    });
+    updateDepartures();
+
+    El.one('header').click(() => updateDepartures(true));
+
+    new WindowSwipeDownFromTopHandler(() => updateDepartures(true));
+
+    window.addEventListener('focus', () => setTimeout(updateDepartures, 500));
+
+    Bootstrap.appUpdateCheck.then(updateAvailable => { appUpdateAvailable = updateAvailable; });
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("$" "jQuery" "Storage" "Entur" "Bootstrap") */
+/* js2-additional-externs: ("El" "Storage" "Entur" "Bootstrap" "InputElement" "GeoComplete") */
 /* End: */

@@ -8,9 +8,7 @@ body {
 }
 
 header, button {
-    /* background: #119030; */
     background: #E60030;
-    /* background: #0000AA; */
 }
 
 h1 {
@@ -52,8 +50,7 @@ header h1 {
 
 #last-updated-info {
     font-size: 0.75rem;
-    float: left;
-    margin: 0.1rem 0 0.3rem 0;
+    margin: 0.1rem 0 0.3rem 0.1rem;
     height: 1rem;
 }
 
@@ -91,7 +88,8 @@ img.loader {
     filter: grayscale(100%);
     animation: spin 0.5s ease infinite;
 }
-img.spinonce {
+
+.spinonce {
     animation: spin 0.5s ease;
 }
 @keyframes spin {
@@ -112,34 +110,29 @@ span.startTime {
     padding-left: 0.2rem;
     padding-right: 0.2rem;
     border-radius: 2px;
-    box-shadow: 0 0 2px #333;
+    box-shadow: 0 0 2px #222;
     vertical-align: middle;
     margin-right: 0.2rem;
 }
 .platformCode {
     display: inline-block;
     border-radius: 50%;
-    width: 1.1rem;
+    min-width: 1.1rem;
     line-height: 1.1rem;
+    padding: 0.1em;
     background-color: #FFCC00;
-    font-size: 60%;
+    font-size: 75%;
     text-align: center;
     font-weight: bold;
-    box-shadow: 0 0 2px #333;
+    box-shadow: 0 0 2px #222;
     vertical-align: middle;
     margin-left: 0.2rem;
-    margin-right: 0.2rem;
+    margin-right: 0.6rem;
 }
 
 section.departure {
     margin-top: 1.6rem;
     min-height: 7.1rem;
-}
-#noDepartures {
-    display: none;
-}
-#appUpdate {
-    display: none;
 }
 .departureHeading {
     padding: 0;
@@ -152,6 +145,9 @@ section.departure {
 }
 .departureList li {
     margin-bottom: 0.25rem;
+}
+.situationNumber {
+    color: #666;
 }
 .situationList {
     list-style-type: none;
@@ -184,32 +180,6 @@ button {
     display: inline-block;
 }
 
-/* jquery.autocomplete.js */
-.autocomplete-suggestions {
-    border: 1px solid #999;
-    background: #FFF;
-    overflow: auto;
-}
-.autocomplete-suggestion {
-    padding: 5px 5px;
-    white-space: nowrap;
-    overflow: hidden;
-}
-.autocomplete-selected {
-    background: #E1E1E1;
-}
-.autocomplete-suggestions strong {
-    font-weight: normal;
-    color: #9C3BBF;
-}
-.autocomplete-group {
-    padding: 2px 5px;
-}
-.autocomplete-group strong {
-    display: block;
-    border-bottom: 1px solid #000;
-}
-
 /* DropdownMenu */
 .Dropdown__container {
     float: right;
@@ -227,7 +197,6 @@ button {
 .Dropdown__menu {
     background-color: #CCCCCC;
     position: absolute;
-    display: none;
     margin: 0;
     padding: 4px;
     width: 80px;
@@ -248,20 +217,49 @@ button {
 /* Inputs */
 input {
     font-size: 1rem;
-    margin-bottom: 1rem;
-    margin-right: 0.5rem;
     padding: 0.5rem;
     width: 300px;
     border: 1px solid gray;
-    
+    margin-bottom: 0.5rem;
 }
 input.invalid {
     border-color: #990000;
 }
-span.invalid {
-    font-style: italic;
-    display: block;
-}
 label {
     display: none;
+}
+#formErrorInfo {
+    font-style: italic;
+}
+
+/* geocomplete.js */
+div.suggestion-box {
+    position: absolute;
+    z-index: 1;
+    background-color: #fff;
+    border: 1px solid #999999;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+ul.suggestion-list {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+li.suggestion-item {
+    padding: 8px 4px 8px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    white-space: nowrap;
+    margin: 0;
+}
+li.suggestion-item:last-child {
+    border-bottom: none;
+}
+li.suggestion-item.selected {
+    background-color: #999;
+    color: #FFF;
 }
