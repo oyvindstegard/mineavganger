@@ -69,12 +69,12 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
     const suggestionBox = El('div.suggestion-box').hide();
 
     const select = (suggestionId, suggestionLabel) => {
-        if (typeof onSelect === 'function') {
-            onSelect.call(inputElement.unwrap(), suggestionId, suggestionLabel);
-        }
         inputElement
             .val(suggestionLabel)
             .data('geoCompleteLastSelectedLabel', suggestionLabel);
+        if (typeof onSelect === 'function') {
+            onSelect.call(inputElement.unwrap(), suggestionId, suggestionLabel);
+        }
     };
 
     const invalidate = () => {
@@ -115,6 +115,12 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             suggestionBox.hide().empty();
             return;
         }
+        if (suggestions.length === 1
+            && suggestions[0].label === inputElement.data('geoCompleteLastSelectedLabel')
+            && suggestions[0].label === inputElement.val()) {
+            suggestionBox.hide().empty();
+            return;
+        }
 
         const suggestionList = El('ul.suggestion-list');
 
@@ -142,14 +148,11 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
 
     const inputListener = (ev) => {
         const text = ev.target.value.trim();
-
-        if (ev.target.dataset['geoCompleteLastSelectedLabel']) {
-            if (text !== ev.target.dataset['geoCompleteLastSelectedLabel']) {
-                invalidate();
-                delete ev.target.dataset['geoCompleteLastSelectedLabel'];
-            } else {
-                return;
-            }
+        
+        if (inputElement.data('geoCompleteLastSelectedLabel')
+            && text !== inputElement.data('geoCompleteLastSelectedLabel')) {
+            inputElement.data('geoCompleteLastSelectedLabel', null);
+            invalidate();
         }
 
         const immediateDispatch = (ev.type === 'focus');

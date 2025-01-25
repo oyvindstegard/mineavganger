@@ -130,7 +130,10 @@ El.ElWrapper.prototype.attr = function(name, value) {
 };
 
 El.ElWrapper.prototype.data = function(name, value) {
-    if (value) {
+    if (value === null) {
+        delete this.element.dataset[name];
+        return this;
+    } else if (value) {
         this.element.dataset[name] = value;
         return this;
     } else {
@@ -147,13 +150,21 @@ El.ElWrapper.prototype.val = function(value) {
 };
 
 El.ElWrapper.prototype.text = function(textContent) {
+    if (textContent) {
     this.element.innerText = textContent;
-    return this;
+        return this;
+    } else {
+        return this.element.innerText;
+    }
 };
 
 El.ElWrapper.prototype.html = function(htmlContent) {
-    this.element.innerHTML = htmlContent;
-    return this;
+    if (htmlContent) {
+        this.element.innerHTML = htmlContent;
+        return this;
+    } else {
+        return this.element.innerHTML;
+    }
 };
 
 El.ElWrapper.prototype.append = function(...content) {
@@ -167,10 +178,11 @@ El.ElWrapper.prototype.setChildren = function(...content) {
     this.element.replaceChildren(...elements);
     return this;
 };
+
 El.ElWrapper.prototype.empty = function() {
     this.setChildren();
     return this;
-}
+};
 
 El.ElWrapper.prototype.replaceWith = function(otherElement) {
     this.element.replaceWith(El.unwrap(otherElement));
@@ -422,8 +434,8 @@ El.each = function(selector, callback, context) {
 };
 
 El.if = function(selectorOrElement, callback, context) {
-    if (selectorOrElement instanceof Element) {
-        return callback.call(selectorOrElement, El.wrap(selectorOrElement));
+    if (selectorOrElement instanceof Element || selectorOrElement instanceof El.ElWrapper) {
+        return callback.call(El.unwrap(selectorOrElement), El.wrap(selectorOrElement));
     } else if (typeof selectorOrElement === 'string') {
         const el = El.one(selectorOrElement, context);
         if (el) {
@@ -431,4 +443,15 @@ El.if = function(selectorOrElement, callback, context) {
         }
     }
     return undefined;
+};
+
+El.esc = function(str) {
+    const entityMap = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return str.replace(/[&<>"']/g, c => entityMap[c]);
 };

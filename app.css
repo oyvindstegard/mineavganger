@@ -110,23 +110,24 @@ span.startTime {
     padding-left: 0.2rem;
     padding-right: 0.2rem;
     border-radius: 2px;
-    box-shadow: 0 0 2px #333;
+    box-shadow: 0 0 2px #222;
     vertical-align: middle;
     margin-right: 0.2rem;
 }
 .platformCode {
     display: inline-block;
     border-radius: 50%;
-    width: 1.1rem;
+    min-width: 1.1rem;
     line-height: 1.1rem;
+    padding: 0.1em;
     background-color: #FFCC00;
-    font-size: 60%;
+    font-size: 75%;
     text-align: center;
     font-weight: bold;
-    box-shadow: 0 0 2px #333;
+    box-shadow: 0 0 2px #222;
     vertical-align: middle;
     margin-left: 0.2rem;
-    margin-right: 0.8rem;
+    margin-right: 0.6rem;
 }
 
 section.departure {
@@ -219,20 +220,16 @@ input {
     padding: 0.5rem;
     width: 300px;
     border: 1px solid gray;
+    margin-bottom: 0.5rem;
 }
 input.invalid {
     border-color: #990000;
 }
-span.invalid {
-    font-style: italic;
-    height: 1rem;
-    margin-top: 0.3rem;
-    margin-bottom: 0.6rem;
-    display: block;
-    visibility: hidden;
-}
 label {
     display: none;
+}
+#formErrorInfo {
+    font-style: italic;
 }
 
 /* geocomplete.js */

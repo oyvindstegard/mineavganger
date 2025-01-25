@@ -49,6 +49,9 @@ const WindowSwipeDownFromTopHandler = function(callback) {
     };
 };
 
+String.prototype.stripAfterComma = function() {
+    return this.replace(/,[^,]*$/,'');
+};
 
 /**
  * @returns an El-wrapped heading element for the departure.
@@ -56,13 +59,13 @@ const WindowSwipeDownFromTopHandler = function(callback) {
 function elDepartureHeading(departure) {
     let title = '';
     if (departure.placeFrom && departure.placeFrom.name) {
-        title = 'fra ' + departure.placeFrom.name.replace(/,.*$/,'');
+        title = 'fra ' + departure.placeFrom.name.stripAfterComma();
     }
     if (departure.placeTo && departure.placeTo.name) {
         if (!title) {
             title = '...';
         }
-        title += ' til ' + departure.placeTo.name.replace(/,.*$/,'');
+        title += ' til ' + departure.placeTo.name.stripAfterComma();
     }
     if (!title) {
         title = 'Ny avgang med ' +  Entur.transportModes[departure.mode].name();
@@ -82,7 +85,6 @@ const DepartureInput = new (function() {
         const modeDesc = Entur.transportModes[transportMode];
 
         const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
-        const placeFromInvalid = El('span.invalid#placeFromInvalid').text('Ikke funnet');
         const placeFromInput = El('input#placeFromInput', {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
@@ -90,7 +92,6 @@ const DepartureInput = new (function() {
         }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
-        const placeToInvalid = El('span.invalid#placeToInvalid').text('Ikke funnet');
         const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
@@ -98,7 +99,7 @@ const DepartureInput = new (function() {
         }).event('focus', ev => El.byId('departureSubmit').scrollTo());
 
         // New departure dynamic heading
-        const updateHeading = function() {
+        const setFormHeading = function() {
             const headingEl = elDepartureHeading({
                 placeFrom: {
                     name: placeFromInput.data('stopPlace')
@@ -107,55 +108,99 @@ const DepartureInput = new (function() {
                     name: placeToInput.data('stopPlace')
                 },
                 mode: transportMode
-            }).attr('id', 'newDepartureHeading');
+            }).id('newDepartureHeading');
             
             El.byId('newDepartureHeading').replaceWith(headingEl);
         };
 
-        const updateFromInvalid = function(reason) {
-            if (reason) {
-                placeFromInvalid.css('visibility', 'visible').text(reason);
-                placeFromInput.addClass('invalid');
-                return;
+        // Form errors displayed to user
+        const formErrorInfo = El('p#formErrorInfo').hide();
+        const setFormError = function(messageHtml, append) {
+            if (messageHtml) {
+                const currentHtmlContents = formErrorInfo.html();
+                if (append && currentHtmlContents) {
+                    formErrorInfo.html(currentHtmlContents + '<br>' + messageHtml);
+                } else {
+                    formErrorInfo.html(messageHtml);
+                }
+                formErrorInfo.show();
+            } else {
+                formErrorInfo.hide().empty();
             }
-
-            placeFromInput.removeClass('invalid');
-            placeFromInvalid.css('visibility', 'hidden');
         };
 
-        const updateToInvalid = function(reason) {
-            if (reason) {
-                placeToInvalid.css('visibility', 'visible').text(reason);
-                placeToInput.addClass('invalid');
-                return;
-            }
+        const checkTripsExist = async function (placeFromId, placeToId) {
+            try {
+                const result = await Entur.fetchJourneyPlannerResults(
+                    Entur.makeTripQuery(placeFromId, placeToId, transportMode, 1));
 
-            placeToInput.removeClass('invalid');
-            placeToInvalid.css('visibility', 'hidden');
+                return result.data.trip.tripPatterns.length > 0;
+            } catch (e) {
+                return false;
+            }
         };
 
-        const validateInputs = function(ev) {
+        const maybeCheckTripsExist = function() {
+            const placeFrom = placeFromInput.data('stopPlace');
+            const placeFromId = placeFromInput.data('stopPlaceId');
+            const placeTo = placeToInput.data('stopPlace');
+            const placeToId = placeToInput.data('stopPlaceId');
+            if (placeFromId && placeToId) {
+                checkTripsExist(placeFromInput.data('stopPlaceId'),
+                                placeToInput.data('stopPlaceId'))
+                    .then(result => {
+                        if (result) {
+                            setFormError();
+                            El.byId('departureSubmit').text('Legg til');
+                            return;
+                        }
+
+                        if (placeFromId === placeFromInput.data('stopPlaceId')
+                            && placeToId === placeToInput.data('stopPlaceId')) {
+                            setFormError(
+                                `Fant ingen avganger med direkteforbindelse ${modeDesc.name()} fra
+                                 ${El.esc(placeFrom.stripAfterComma())} til
+                                 ${El.esc(placeTo.stripAfterComma())}.`);
+                            El.byId('departureSubmit').text('Legg til likevel');
+                        } else {
+                            setFormError();
+                            El.byId('departureSubmit').text('Legg til');
+                        }
+                    });
+            }
+        };
+        
+        const validateInputs = function(forSubmit) {
             let ok = true;
+            setFormError();
 
-            if (placeFromInput.val() !== placeFromInput.data('stopPlace')) {
-                updateFromInvalid('Ikke funnet');
+            const fromVal = placeFromInput.val().trim();
+            const toVal = placeToInput.val().trim();
+            
+            if (fromVal && fromVal !== placeFromInput.data('stopPlace')) {
+                setFormError(`Fra ${modeDesc.place()} «${El.esc(fromVal)}» er ukjent.`, true);
+                ok = false;
+            } else if (forSubmit && !fromVal) {
+                setFormError(`Mangler ${placeFromInput.unwrap().title}.`, true);
                 ok = false;
             }
 
-            if (placeToInput.val() !== placeToInput.data('stopPlace')) {
-                updateToInvalid('Ikke funnet');
+            if (toVal && toVal !== placeToInput.data('stopPlace')) {
+                setFormError(`Til ${modeDesc.place()} «${El.esc(toVal)}» er ukjent.`, true);
+                ok = false;
+            } else if (forSubmit && !toVal) {
+                setFormError(`Mangler ${placeToInput.unwrap().title}.`, true);
                 ok = false;
             }
 
-            if (ok && placeFromInput.data('stopPlaceId') === placeToInput.data('stopPlaceId')) {
-                updateFromInvalid('Fra og til er samme stoppested.');
-                updateToInvalid('Fra og til er samme stoppested.');
+            if (ok && toVal && fromVal && placeFromInput.data('stopPlaceId')
+                && placeFromInput.data('stopPlaceId') === placeToInput.data('stopPlaceId')) {
+                setFormError('Fra og til kan ikke være samme stoppested.');
                 ok = false;
-            }
+            } 
 
-            if (ok) {
-                updateFromInvalid();
-                updateToInvalid();
+            if (ok && !forSubmit) {
+                maybeCheckTripsExist();
             }
 
             return ok;
@@ -165,42 +210,26 @@ const DepartureInput = new (function() {
             placeFromInput, transportMode,
             function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
-                let valueIsChanged = (id !== this.dataset['stopPlaceId']);
-                
                 this.dataset['stopPlaceId'] = id;
                 this.dataset['stopPlace'] = label;
-                updateHeading();
-                updateFromInvalid();
-
-                if (placeFromInput.val() && valueIsChanged) {
+                setFormHeading();
+                validateInputs();
+                if (! placeToInput.val()) {
                     placeToInput.focus();
                 }
-            },
-            function onInvalidate() {
-                console.log('invalidated selected input');
-                delete this.dataset['stopPlaceId'];
-                delete this.dataset['stopPlace'];
             });
         
         const toAutocomplete = new GeoComplete(
             placeToInput.unwrap(), transportMode,
             function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
-                let valueIsChanged = (id.value !== this.dataset['stopPlaceId']);
-                
                 this.dataset['stopPlaceId'] = id;
                 this.dataset['stopPlace'] = label;
-                updateHeading();
-                updateToInvalid();
-
-                if (placeToInput.val() && valueIsChanged) {
+                setFormHeading();
+                if (validateInputs() && placeFromInput.val()) {
                     El.byId('departureSubmit').focus();
                 }
-            }, function onInvalidate() {
-                delete this.dataset['stopPlaceId'];
-                delete this.dataset['stopPlace'];
             });
-
 
         return El('form.newDeparture#newDepartureForm', {autocomplete: 'off'})
             .append(
@@ -208,15 +237,16 @@ const DepartureInput = new (function() {
                     placeFrom: {},
                     placeTo: {},
                     mode: transportMode
-                }).attr('id', 'newDepartureHeading'),
+                }).id('newDepartureHeading'),
 
                 El('ul.departureList').append(
-                    El('li').append(placeFromInput, placeFromInputLabel, placeFromInvalid),
-                    El('li').append(placeToInput, placeToInputLabel, placeToInvalid)
+                    El('li').append(placeFromInput, placeFromInputLabel),
+                    El('li').append(placeToInput, placeToInputLabel)
                 ),
-
+                
+                formErrorInfo,
+                
                 El('button#departureSubmit', {type: 'submit'}).text('Legg til'),
-
                 El('button', {type: 'button'}).text('Avbryt').click(ev => {
                     ev.preventDefault();
                     fromAutocomplete.dispose();
@@ -225,7 +255,7 @@ const DepartureInput = new (function() {
                         .replaceWith(self.elNewDepartureButtons(addCallback));
                 })
             ).event('submit', ev => {
-                if (!validateInputs()) {
+                if (!validateInputs(true)) {
                     ev.preventDefault();
                     return;
                 }
@@ -454,7 +484,7 @@ function elSituationSymbolElement(trip, collectedSituations, showSituationNumber
             showSituationNumbers ?
                 El('span.situationNumber')
                 .css('font-size', '90%')
-                .html(' ' + appliesToTrip.map(s => s.n).join(', ')) : null);
+                .html('&nbsp;' + appliesToTrip.map(s => s.n).join(',&nbsp;')) : null);
     }
     return null;
 }
@@ -585,6 +615,12 @@ function elDepartureSection(d) {
         );
 }
 
+function elLoaderWithHeight(height) {
+    const loaderHeight = Math.max(32, height);
+    return El('div').css('display','block').css('height', loaderHeight + 'px').append(
+        El('img.loader', {src: 'logo.svg?_V=' + Bootstrap.V}));
+}
+
 function departureListLoaderAnimation(departureListElement) {
     const elementHeight = departureListElement.getBoundingClientRect().height;
     const loaderHeight = Math.max(32, elementHeight);
@@ -660,9 +696,9 @@ function updateDeparture(departureSection) {
                const modeDesc = Entur.transportModes[mode];
                 El.one('ul.departureList', el).replaceWith(
                     El('ul.departureList').append(
-                        El('li').text(
-                            `Fant ingen avganger
-                             med ${modeDesc.name()} fra ${placeFromName} til ${placeToName}`
+                        El('li').html(
+                            `Fant ingen avganger med direkteforbindelse ${modeDesc.name()}
+                             fra ${placeFromName} til ${placeToName}`
                         )
                     )
                 );
