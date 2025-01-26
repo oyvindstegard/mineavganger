@@ -116,7 +116,7 @@ Content-type: application/graphql
   }
 }
 
-# Fra A. Kiellands
+# T-bane fra Majorstuen til Jernbanetorget
 POST :JP_URL
 :CLIENT_H
 Accept: application/json
@@ -125,56 +125,68 @@ Content-type: application/graphql
 {
   trip(
     to: {
-      place: "NSR:StopPlace:5576"
-      name: "Drøbak torg, Frogn"
+      place: "NSR:StopPlace:58381"
     }
     from: {
-      place: "NSR:StopPlace:59872"
-      name: "Oslo S, Oslo"
+      place: "NSR:StopPlace:58366"
     }
-    modes: {transportModes: {transportMode: bus}}
+    modes: {transportModes: {transportMode: metro}}
     maximumTransfers: 1
-    numTripPatterns: 3
+    numTripPatterns: 6
   )
   {
-    tripPatterns {
-      startTime
-      duration
-      legs {
-        authority {
-          name
-        }
-        fromPlace {
-          name
-        }
-        fromEstimatedCall {
-          expectedDepartureTime
-          aimedDepartureTime
-          destinationDisplay {
-            frontText
-          }
-        }
-        toPlace {
-          name
-        }
-        serviceJourney {
-          line {
-            presentation {
-              colour
-              textColour
-            }
-          }
-        }
-        line {
-          name
-          id
-          publicCode
-        }
-        mode
+tripPatterns {
+  legs {
+    authority {
+      name
+    }
+    fromPlace {
+      name
+    }
+    toPlace {
+      name
+    }
+    fromEstimatedCall {
+      expectedDepartureTime
+      aimedDepartureTime
+      destinationDisplay {
+        frontText
+      }
+      quay {
+        publicCode
       }
     }
+    line {
+      name
+      id
+      publicCode
+      presentation {
+        colour
+        textColour
+      }
+    }
+    situations {
+      id
+      situationNumber
+      summary {
+        value
+        language
+      }
+      description {
+        value
+        language
+      }
+      validityPeriod {
+        startTime
+        endTime
+      }
+    }
+    mode
   }
 }
+}
+}
+
 #
 
 # Vestby til Oslo S med tog
@@ -261,6 +273,8 @@ Content-Type: application/graphql
 
 {
    situations(authorities: ["RUT:Authority:RUT"]) {
+     situationNumber
+     id
      description {
        value
        language
