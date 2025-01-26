@@ -89,14 +89,14 @@ const DepartureInput = new (function() {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
             placeholder: `Fra ${modeDesc.place()}`
-        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
+        });
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
         const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
-        }).event('focus', ev => El.byId('departureSubmit').scrollTo());
+        }).event('focus', () => El.byId('departureSubmit').scrollTo());
 
         // New departure dynamic heading
         const setFormHeading = function() {
@@ -285,6 +285,7 @@ const DepartureInput = new (function() {
                             ev.preventDefault();
                             El.byId('newDepartureButtons').replaceWith(
                                 elNewDepartureForm(modeKey, addCallback));
+                            El.byId('departureSubmit').scrollTo();
                             El.byId('placeFromInput').focus();
                         });
                 }));
@@ -690,8 +691,8 @@ function updateDeparture(departureSection) {
             if (listItems.length) {
                 const situationListItems = situations.map(s => elSituationListItem(s, showSituationNumbers));
                 
-                El('ul.departureList').append(listItems).replace(El.one('ul.departureList', el));
-                El('ul.situationList').append(situationListItems).replace(El.one('ul.situationList', el));
+                El.one('ul.departureList', el).replaceWith(El('ul.departureList').append(listItems));
+                El.one('ul.situationList', el).setChildren(situationListItems);
             } else { 
                const modeDesc = Entur.transportModes[mode];
                 El.one('ul.departureList', el).replaceWith(
@@ -703,7 +704,7 @@ function updateDeparture(departureSection) {
                     )
                 );
                 
-                El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
+                El.one('ul.situationList', el).empty();
             }
         })
         .catch((e) => {
@@ -717,7 +718,7 @@ function updateDeparture(departureSection) {
                 )
             ).replace(El.one('ul.departureList', el));
 
-            El.if('ul.situationList', situationListEl => situationListEl.remove(), el);
+            El.one('ul.situationList', el).empty();
         })
         .finally(() => {
             el.data('loading', 'false');

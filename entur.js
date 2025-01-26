@@ -171,7 +171,7 @@ const Entur = new function() {
     /* Post to JourneyPlanner API: GraphQL payload wrapped in JSON container.
        This function throttles number of concurrent requests to avoid request
        rate penalties from JourneyPlanner API. It returns a promise.
-       A single retry with backoff is also part of this function.
+       Retries are handled by serviceworker.js.
     */
     this.fetchJourneyPlannerResults = function(graphqlQuery) {
         const requestFunc = () => {
@@ -195,14 +195,7 @@ const Entur = new function() {
             });
         };
         
-        return throttledDispatcher.enqueue(requestFunc)
-            .catch(function(err) {
-                console.error(`JourneyPlanner request failed: ${err}`);
-                // Back off 5 secs and retry once
-                return new Promise((resolve, reject) => {
-                    setTimeout(resolve, 5000);
-                }).then(() => throttledDispatcher.enqueue(requestFunc));
-            });
+        return throttledDispatcher.enqueue(requestFunc);
     };
 
     /*
