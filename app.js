@@ -785,7 +785,9 @@ function renderApp() {
     ).hide().appendTo(appContent);
 
     El('section#noDepartures').html(
-        '<p>Ingen avganger er lagret.</p><p>Legg til nye ved å velge transportmiddel med knappene under.</p>'
+        `<p>En mobilvennlig web-applikasjon som raskt viser sanntidsinformasjon om de
+         kollektiv-avgangene man benytter hver dag.</p> <p>Kom i gang ved å
+         velge transportmiddel med knappene under.</p>`
     ).hide().appendTo(appContent);
 
     departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
