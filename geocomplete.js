@@ -134,7 +134,7 @@ const GeoComplete = function(inputElement, transportMode, onSelect, onInvalidate
             suggestionList.append(listItem);
         });
 
-        const boxWidth = inputElement.unwrap().getBoundingClientRect().width - 1;
+        const boxWidth = inputElement.unwrap().getBoundingClientRect().width - 2;
 
         suggestionBox
             .css('width', boxWidth + 'px')

@@ -201,6 +201,7 @@ button {
     padding: 4px;
     width: 80px;
     transform: translate(-58px);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
     z-index: 1;
 }
 .Dropdown__item {
@@ -238,11 +239,12 @@ div.suggestion-box {
     z-index: 1;
     background-color: #fff;
     border: 1px solid #999999;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
     margin: 0;
     max-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
+    translate: 0 -0.4rem;
 }
 ul.suggestion-list {
     padding: 0;
