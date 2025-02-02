@@ -82,6 +82,7 @@ const DepartureInput = new (function() {
     const self = this;
 
     const elNewDepartureForm = function(transportMode, addCallback) {
+
         const modeDesc = Entur.transportModes[transportMode];
 
         const placeFromInputLabel = El('label', {for: 'placeFromInput'}).text('Fra ' + modeDesc.place());
@@ -89,15 +90,17 @@ const DepartureInput = new (function() {
             type: 'text',
             title: `Fra ${modeDesc.place()}`,
             placeholder: `Fra ${modeDesc.place()}`
-        });
+        }).event('focus', () => setTimeout(() =>
+            El.byId('departureSubmit').unwrap().scrollIntoView(false), 400));
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
         const placeToInput = El('input#placeToInput', {
             type: 'text',
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
-        }).event('focus', () => El.byId('departureSubmit').scrollTo());
-
+        }).event('focus', () => setTimeout(() =>
+            El.byId('departureSubmit').unwrap().scrollIntoView(false), 400));
+        
         // New departure dynamic heading
         const setFormHeading = function() {
             const headingEl = elDepartureHeading({
@@ -151,20 +154,22 @@ const DepartureInput = new (function() {
                     .then(result => {
                         if (result) {
                             setFormError();
-                            El.byId('departureSubmit').text('Legg til');
+                            El.byId('departureSubmit').text('Legg til').scrollTo();
                             return;
                         }
-
+                        
+                        const searchWindowHours = Entur.tripQueryDefaults.searchWindowHours;
                         if (placeFromId === placeFromInput.data('stopPlaceId')
                             && placeToId === placeToInput.data('stopPlaceId')) {
                             setFormError(
                                 `Fant ingen avganger med direkteforbindelse ${modeDesc.name()} fra
                                  ${El.esc(placeFrom.stripAfterComma())} til
-                                 ${El.esc(placeTo.stripAfterComma())}.`);
-                            El.byId('departureSubmit').text('Legg til likevel');
+                                 ${El.esc(placeTo.stripAfterComma())}
+                                 i løpet av de neste ${searchWindowHours} timene.`);
+                            El.byId('departureSubmit').text('Legg til likevel').scrollTo();
                         } else {
                             setFormError();
-                            El.byId('departureSubmit').text('Legg til');
+                            El.byId('departureSubmit').text('Legg til').scrollTo();
                         }
                     });
             }
@@ -203,11 +208,11 @@ const DepartureInput = new (function() {
                 maybeCheckTripsExist();
             }
 
+
             return ok;
         };
         
-        const fromAutocomplete = new GeoComplete(
-            placeFromInput, transportMode,
+        const fromAutocomplete = new GeoComplete(placeFromInput, transportMode,
             function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
                 this.dataset['stopPlaceId'] = id;
@@ -216,11 +221,12 @@ const DepartureInput = new (function() {
                 validateInputs();
                 if (! placeToInput.val()) {
                     placeToInput.focus();
+                } else {
+                    El.byId('departureSubmit').scrollTo();
                 }
             });
         
-        const toAutocomplete = new GeoComplete(
-            placeToInput.unwrap(), transportMode,
+        const toAutocomplete = new GeoComplete(placeToInput, transportMode,
             function onSelect(id, label) {
                 // 'this' is bound to element on which event occurs
                 this.dataset['stopPlaceId'] = id;
@@ -228,6 +234,8 @@ const DepartureInput = new (function() {
                 setFormHeading();
                 if (validateInputs() && placeFromInput.val()) {
                     El.byId('departureSubmit').focus();
+                } else {
+                    El.byId('departureSubmit').scrollTo();
                 }
             });
 
@@ -285,7 +293,6 @@ const DepartureInput = new (function() {
                             ev.preventDefault();
                             El.byId('newDepartureButtons').replaceWith(
                                 elNewDepartureForm(modeKey, addCallback));
-                            El.byId('departureSubmit').scrollTo();
                             El.byId('placeFromInput').focus();
                         });
                 }));
@@ -422,7 +429,7 @@ function elTimeElements(trip, displayMinutesToStart) {
     if (minutesToStart == 0) {
         minutesToStart = 'nå';
     } else if (minutesToStart < 60) {
-        minutesToStart = 'om ' + minutesToStart + (minutesToStart > 1 ? ' minutter' : ' minutt');
+        minutesToStart = 'om ' + minutesToStart + ' min';
     } else {
         minutesToStart = 'over én time';
     }
@@ -694,12 +701,13 @@ function updateDeparture(departureSection) {
                 El.one('ul.departureList', el).replaceWith(El('ul.departureList').append(listItems));
                 El.one('ul.situationList', el).setChildren(situationListItems);
             } else { 
-               const modeDesc = Entur.transportModes[mode];
+                const modeDesc = Entur.transportModes[mode];
+                const searchWindowHours = Entur.tripQueryDefaults.searchWindowHours;
                 El.one('ul.departureList', el).replaceWith(
                     El('ul.departureList').append(
                         El('li').html(
-                            `Fant ingen avganger med direkteforbindelse ${modeDesc.name()}
-                             fra ${placeFromName} til ${placeToName}`
+                            `Ingen avganger med direkteforbindelse ${modeDesc.name()}
+                             i løpet av de neste ${searchWindowHours} timene.`
                         )
                     )
                 );
@@ -720,9 +728,7 @@ function updateDeparture(departureSection) {
 
             El.one('ul.situationList', el).empty();
         })
-        .finally(() => {
-            el.data('loading', 'false');
-        });
+        .finally(() => el.data('loading', 'false'));
 }
 
 const updateIntervalSeconds = 60;

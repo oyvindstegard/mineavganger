@@ -108,6 +108,12 @@ El.ElWrapper.prototype.css = function(cssProperty, value) {
         this.element.style.setProperty(cssProperty, value);
         return this;
     }
+
+    if (value === null) {
+        this.element.style.removeProperty(cssProperty);
+        return this;
+    }
+    
     return this.element.style.getPropertyValue(cssProperty);
 };
 

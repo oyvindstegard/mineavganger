@@ -9,6 +9,7 @@ body {
 
 header, button {
     background: #E60030;
+    color: #FFFFFF;
 }
 
 h1 {
@@ -29,7 +30,6 @@ header {
     left: 0;
     box-sizing: border-box;
     width: 100%;
-    color:#FFFFFF;
     white-space: nowrap;
     padding-left: 0.6rem;
 }
@@ -121,7 +121,7 @@ span.startTime {
     line-height: 1.1rem;
     padding: 0.1em;
     background-color: #FFCC00;
-    font-size: 75%;
+    font-size: 70%;
     text-align: center;
     font-weight: bold;
     box-shadow: 0 0 2px #222;
@@ -169,7 +169,6 @@ section.departure {
 
 button {
     border: none;
-    color: #FFFFFF;
     font-size: 1rem;
     font-weight: bold;
     text-align: center;
