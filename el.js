@@ -279,8 +279,8 @@ El.ElWrapper.prototype.fadeOut = function(animationDurationMilliseconds) {
             if (animationDurationMilliseconds) {
                 this.element.style.removeProperty('animationDuration');
             }
-            
-            setTimeout(() => resolve(this), 1);
+
+            window.requestAnimationFrame(() => resolve(this));
         };
         this.element.addEventListener('animationend', endListener, { once: true });
 
@@ -307,7 +307,8 @@ El.ElWrapper.prototype.fadeIn = function(cssDisplayShowValue, animationDurationM
             if (animationDurationMilliseconds) {
                 this.element.style.removeProperty('animationDuration');
             }
-            setTimeout(() => resolve(this), 1);
+            
+            window.requestAnimationFrame(() => resolve(this));
         };
         this.element.addEventListener('animationend', endListener, { once: true });
 
