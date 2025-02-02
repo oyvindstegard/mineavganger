@@ -7,7 +7,7 @@
 
 'use strict';
 
-const V = '8';
+const V = '9';
 
 const cacheName = 'V' + V;
 
