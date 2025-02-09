@@ -510,7 +510,7 @@ function elSituationListItem(situation, showSituationNumber) {
                 .text('Vis mer')
                 .click(ev => {
                     ev.preventDefault();
-                    postponeUpdate(20);
+                    updateTimer.adjustNextScheduledTrigger(20);
                     El('li.situation__expanded')
                         .html('&#x26a0;&#xfe0f; ' +
                               (showSituationNumber ? situationNumberHtml : '')
@@ -719,7 +719,7 @@ function updateDeparture(departureSection) {
             El('ul.departureList').append(
                 El('li').html('Signalfeil ! Noe teknisk gikk galt &#x26a0;&#xfe0f;'),
                 El('li').append(
-                    El('button').text('Forsøk på nytt').click(ev => updateDepartures(true))
+                    El('button').text('Forsøk på nytt').click(ev => updateTimer.check(true))
                 ),
                 El('li.technical').html(
                     `Feil: [${placeFrom}] &#x2192; [${placeTo}]: ${e.message}`
@@ -731,55 +731,89 @@ function updateDeparture(departureSection) {
         .finally(() => el.data('loading', 'false'));
 }
 
-const updateIntervalSeconds = 60;
-var lastUpdate = null;
-var updateTimeout = null;
-var appUpdateAvailable = false;
-function updateDepartures(userIntent) {
-    if (updateTimeout) {
-        clearTimeout(updateTimeout);
-        updateTimeout = null;
-    }
-
-    if (userIntent === true || lastUpdate === null
-        || (new Date().getTime() - lastUpdate.getTime()) >= updateIntervalSeconds*1000) {
-        spinOnce(El.byId('logospinner').unwrap());
-
-        El.each('main section.departure', updateDeparture);
-
-        lastUpdate = new Date();
-        El.byId('last-updated-info').text(lastUpdate.hhmm());
-
-        if (appUpdateAvailable) {
-            El.byId('appUpdate').show();
-        }
-        if (El.none('main section.departure')) {
-            El.byId('noDepartures').show();
-        } else {
-            El.byId('noDepartures').hide();
-        }
-    }
-
-    updateTimeout = setTimeout(updateDepartures, updateIntervalSeconds*1000);
-}
-
-function postponeUpdate(secondsToPostpone) {
-    if (updateTimeout) {
-        clearTimeout(updateTimeout);
-        updateTimeout = null;
-    }
-
-    const nowSeconds = new Date().getTime() / 1000;
+const Timer = function(triggerIntervalSeconds, triggerCallback) {
+    const intervalMillis = triggerIntervalSeconds * 1000;
     
-    const nextRegularUpdateInSeconds =
-              lastUpdate ? updateIntervalSeconds - (nowSeconds - lastUpdate.getTime()/1000) : 0;
+    let scheduledTimeoutId = null;
+    let nextTriggerTime = 0;
 
-    const postponedUpdateInSeconds = Math.max(nextRegularUpdateInSeconds, 0) + secondsToPostpone;
+    const scheduleTimeout = function(nextTime) {
+        if (scheduledTimeoutId) {
+            clearTimeout(scheduledTimeoutId);
+            scheduledTimeoutId = null;
+        }
+        
+        const nowTime = new Date().getTime();
+        if (nextTime === undefined) {
+            nextTriggerTime = nowTime + intervalMillis;
+        } else {
+            nextTriggerTime = nextTime;
+        }
+        
+        const timeoutMillis = Math.max(0, nextTime - nowTime + 100);
+        scheduledTimeoutId = setTimeout(maybeTrigger, timeoutMillis);
+    };
 
-    const postponedTimeoutSeconds = Math.min(updateIntervalSeconds, postponedUpdateInSeconds);
+    const maybeTrigger = function() {
+        const now = new Date();
+        if (now.getTime() >= nextTriggerTime) {
+            try {
+                triggerCallback(now);
+            } catch (e) {
+                console.warn(`Timer: callback threw error: ${e.message}`);
+            }
+            scheduleTimeout();
+        } else {
+            scheduleTimeout(nextTriggerTime);
+        }
+    };
 
-    updateTimeout = setTimeout(updateDepartures, postponedTimeoutSeconds*1000);
-}
+    this.start = function() {
+        scheduleTimeout(0);
+    };
+
+    this.check = function(forceTriggerNow) {
+        if (forceTriggerNow) {
+            scheduleTimeout(0);
+        } else {
+            maybeTrigger();
+        }
+    };
+
+    this.adjustNextScheduledTrigger = function(secondsToAdjust) {
+        const now = new Date().getTime();
+        let nextTime = nextTriggerTime + secondsToAdjust*1000;
+        if (nextTime > now + intervalMillis) {
+            nextTime = now + intervalMillis;
+        }
+        scheduleTimeout(nextTime);
+    };
+    
+    this.stop = function() {
+        if (scheduledTimeoutId) {
+            clearTimeout(scheduledTimeoutId);
+            scheduledTimeoutId = null;
+        }
+    };
+};
+
+var appUpdateAvailable = false;
+const updateTimer = new Timer(60, time => {
+    spinOnce(El.byId('logospinner'));
+
+    El.each('main section.departure', updateDeparture);
+
+    El.byId('last-updated-info').text(time.hhmm());
+
+    if (appUpdateAvailable) {
+        El.byId('appUpdate').show();
+    }
+    if (El.none('main section.departure')) {
+        El.byId('noDepartures').show();
+    } else {
+        El.byId('noDepartures').hide();
+    }
+});
 
 function renderApp() {
     const departures = Storage.getDepartures();
@@ -796,7 +830,7 @@ function renderApp() {
          velge transportmiddel med knappene under.</p>`
     ).hide().appendTo(appContent);
 
-    departures.forEach((departure) => elDepartureSection(departure).appendTo(appContent));
+    departures.forEach(departure => elDepartureSection(departure).appendTo(appContent));
 
     const addCallback = (newDep) => {
         Storage.saveDeparture({
@@ -811,7 +845,7 @@ function renderApp() {
             mode: newDep.mode
         });
         renderApp();
-        updateDepartures(true);
+        updateTimer.check(true);
     };
 
     DepartureInput.elNewDepartureButtons(addCallback).appendTo(appContent);
@@ -824,13 +858,13 @@ function renderApp() {
 function appInit() {
     renderApp();
 
-    updateDepartures();
+    updateTimer.start();
 
-    El.one('header').click(() => updateDepartures(true));
+    El.one('header').click(() => updateTimer.check(true));
 
-    new WindowSwipeDownFromTopHandler(() => updateDepartures(true));
+    new WindowSwipeDownFromTopHandler(() => updateTimer.check(true));
 
-    window.addEventListener('focus', () => setTimeout(updateDepartures, 500));
+    window.addEventListener('focus', () => updateTimer.check());
 
     Bootstrap.appUpdateCheck.then(updateAvailable => { appUpdateAvailable = updateAvailable; });
 }
