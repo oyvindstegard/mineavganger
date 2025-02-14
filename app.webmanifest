@@ -10,27 +10,27 @@
     "icons": [
         {
             "sizes": "128x128",
-            "src": "logo-128.png?_V=9",
+            "src": "logo-128.png?_V=10",
             "type": "image/png"
         },
         {
             "sizes": "180x180",
-            "src": "logo-180.png?_V=9",
+            "src": "logo-180.png?_V=10",
             "type": "image/png"
         },
         {
             "sizes": "181x181",
-            "src": "logo.svg?_V=9",
+            "src": "logo.svg?_V=10",
             "type": "application/svg+xml"
         },
         {
             "sizes": "192x192",
-            "src": "logo.svg?_V=9",
+            "src": "logo.svg?_V=10",
             "type": "application/svg+xml"
         },
         {
             "sizes": "512x512",
-            "src": "logo.svg?_V=9",
+            "src": "logo.svg?_V=10",
             "type": "application/svg+xml"
         }
     ]
