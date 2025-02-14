@@ -219,27 +219,33 @@ El.ElWrapper.prototype.click = function(handler) {
     return this.event('click', handler);
 };
 
-El.ElWrapper.prototype.scrollTo = function(marginX, marginY) {
-    const rect = this.element.getBoundingClientRect();
-    const viewportHeight = window.visualViewport.height;
-    const viewportWidth = window.visualViewport.width;
+El.ElWrapper.prototype.scrollTo = function(align) {
+    if (align === 'top') {
+        this.element.scrollIntoView({block:'start', inline: 'nearest', behavior: 'smooth'});
+    } else if (align === 'bottom') {
+        this.element.scrollIntoView({block:'end', inline: 'nearest', behavior: 'smooth'});
+    } else {
+        const rect = this.element.getBoundingClientRect();
+        const viewportHeight = window.visualViewport.height;
+        const viewportWidth = window.visualViewport.width;
 
-    if (!marginX) marginX = 10;
-    if (!marginY) marginY = 10;
-    
-    let scrollX=0, scrollY=0;
-    if (rect.left < 0) {
-        scrollX = rect.left - marginX;
-    } else if (rect.right > viewportWidth) {
-        scrollX = rect.right - viewportWidth + marginX;
-    }
-    if (rect.top < 0) {
-        scrollY = rect.top - marginY;
-    } else if (rect.bottom > viewportHeight) {
-        scrollY = rect.bottom - viewportHeight + marginY;
-    }
-    if (scrollX || scrollY) {
-        window.scrollBy(scrollX, scrollY);
+        const marginX = 10;
+        const marginY = 10;
+        
+        let scrollX=0, scrollY=0;
+        if (rect.left < 0) {
+            scrollX = rect.left - marginX;
+        } else if (rect.right > viewportWidth) {
+            scrollX = rect.right - viewportWidth + marginX;
+        }
+        if (rect.top < 0) {
+            scrollY = rect.top - marginY;
+        } else if (rect.bottom > viewportHeight) {
+            scrollY = rect.bottom - viewportHeight + marginY;
+        }
+        if (scrollX || scrollY) {
+            window.scrollBy({top: scrollY, left: scrollX, behavior:'smooth'});
+        }
     }
     
     return this;

@@ -91,7 +91,7 @@ const DepartureInput = new (function() {
             title: `Fra ${modeDesc.place()}`,
             placeholder: `Fra ${modeDesc.place()}`
         }).event('focus', () => setTimeout(() =>
-            El.byId('departureSubmit').unwrap().scrollIntoView(false), 400));
+            El.byId('newDepartureHeading').scrollTo('top'), 300));
 
         const placeToInputLabel = El('label', {for: 'placeToInput'}).text('Til ' + modeDesc.place());
         const placeToInput = El('input#placeToInput', {
@@ -99,7 +99,7 @@ const DepartureInput = new (function() {
             title: 'Til ' + modeDesc.place(),
             placeholder: 'Til ' + modeDesc.place()
         }).event('focus', () => setTimeout(() =>
-            El.byId('departureSubmit').unwrap().scrollIntoView(false), 400));
+            El.byId('newDepartureHeading').scrollTo('top'), 300));
         
         // New departure dynamic heading
         const setFormHeading = function() {
@@ -154,7 +154,7 @@ const DepartureInput = new (function() {
                     .then(result => {
                         if (result) {
                             setFormError();
-                            El.byId('departureSubmit').text('Legg til').scrollTo();
+                            El.byId('departureSubmit').text('Legg til').focus();
                             return;
                         }
                         
@@ -166,10 +166,10 @@ const DepartureInput = new (function() {
                                  ${El.esc(placeFrom.stripAfterComma())} til
                                  ${El.esc(placeTo.stripAfterComma())}
                                  i løpet av de neste ${searchWindowHours} timene.`);
-                            El.byId('departureSubmit').text('Legg til likevel').scrollTo();
+                            El.byId('departureSubmit').text('Legg til likevel');
                         } else {
                             setFormError();
-                            El.byId('departureSubmit').text('Legg til').scrollTo();
+                            El.byId('departureSubmit').text('Legg til');
                         }
                     });
             }
@@ -221,8 +221,6 @@ const DepartureInput = new (function() {
                 validateInputs();
                 if (! placeToInput.val()) {
                     placeToInput.focus();
-                } else {
-                    El.byId('departureSubmit').scrollTo();
                 }
             });
         
@@ -234,8 +232,6 @@ const DepartureInput = new (function() {
                 setFormHeading();
                 if (validateInputs() && placeFromInput.val()) {
                     El.byId('departureSubmit').focus();
-                } else {
-                    El.byId('departureSubmit').scrollTo();
                 }
             });
 
