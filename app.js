@@ -723,6 +723,8 @@ function updateDeparture(departureSection) {
             ).replace(El.one('ul.departureList', el));
 
             El.one('ul.situationList', el).empty();
+
+            loadingErrorCondition = true;
         })
         .finally(() => el.data('loading', 'false'));
 }
@@ -768,8 +770,8 @@ const Timer = function(triggerIntervalSeconds, triggerCallback) {
         scheduleTimeout(0);
     };
 
-    this.check = function(forceTriggerNow) {
-        if (forceTriggerNow) {
+    this.check = function(immediate) {
+        if (immediate) {
             scheduleTimeout(0);
         } else {
             maybeTrigger();
@@ -794,9 +796,11 @@ const Timer = function(triggerIntervalSeconds, triggerCallback) {
 };
 
 var appUpdateAvailable = false;
+var loadingErrorCondition = false;
 const updateTimer = new Timer(60, time => {
     spinOnce(El.byId('logospinner'));
 
+    loadingErrorCondition = false;
     El.each('main section.departure', updateDeparture);
 
     El.byId('last-updated-info').text(time.hhmm());
@@ -804,6 +808,7 @@ const updateTimer = new Timer(60, time => {
     if (appUpdateAvailable) {
         El.byId('appUpdate').show();
     }
+    
     if (El.none('main section.departure')) {
         El.byId('noDepartures').show();
     } else {
@@ -850,7 +855,9 @@ function renderApp() {
 }
 
 
-/* Application entry point, called after script dependencies have been loaded. */
+/* Application entry point, called by Bootstrap after script dependencies have
+ * been loaded.
+ */
 function appInit() {
     renderApp();
 
@@ -860,11 +867,11 @@ function appInit() {
 
     new WindowSwipeDownFromTopHandler(() => updateTimer.check(true));
 
-    window.addEventListener('focus', () => updateTimer.check());
+    window.addEventListener('focus', () => updateTimer.check(loadingErrorCondition));
 
     Bootstrap.appUpdateCheck.then(updateAvailable => { appUpdateAvailable = updateAvailable; });
 }
 
 /* Local Variables: */
-/* js2-additional-externs: ("El" "Storage" "Entur" "Bootstrap" "InputElement" "GeoComplete") */
+/* js2-additional-externs: ("El" "Storage" "Entur" "Bootstrap" "GeoComplete") */
 /* End: */
